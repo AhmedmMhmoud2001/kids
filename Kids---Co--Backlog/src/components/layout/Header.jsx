@@ -101,7 +101,7 @@ const Header = () => {
             {offers.length > 0 ? (
               <Swiper
                 key={language}
-                rtl={language === 'ar'}
+                rtl={language === 'ar' ? true : undefined}
                 modules={[Autoplay]}
                 slidesPerView={1}
                 loop={offers.length > 1}
@@ -181,17 +181,25 @@ const Header = () => {
 
               <NavLink
                 to="/home2"
-                className={({ isActive }) =>
-                  `lg:flex items-end justify-center
+                className={({ isActive }) => {
+                  const isRTL =
+                    typeof window !== 'undefined' &&
+                    ((document.documentElement.getAttribute('dir') || 'ltr')?.toLowerCase() === 'rtl');
+                  const borderPart = isRTL ? 'border-r-2 border-gray-200' : 'border-l-2 border-gray-200';
+                  const afterCore = isRTL
+                    ? "after:content-[''] after:absolute after:right-0 after:bottom-0 after:h-[2px] after:transition-all after:duration-300 after:ease-out"
+                    : "after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:transition-all after:duration-300 after:ease-out";
+                  const afterPos = isRTL ? 'after:right-0' : 'after:left-0';
+                  return `lg:flex items-end justify-center
      h-12 w-24 relative
      transition-colors text-2xl
-     after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px]
-     after:transition-all after:duration-300 after:ease-out border-l-2 border-gray-200
+     ${afterCore} ${afterPos}
+     ${borderPart}
      ${isActive
                     ? "text-gray-900 font-semibold after:w-full after:opacity-100 after:bg-gray-900"
                     : "text-gray-400 hover:text-gray-600 after:w-0 after:opacity-0 hover:after:w-full hover:after:opacity-100 hover:after:bg-gray-600"
-                  }`
-                }
+                  }`;
+                }}
               >
                 NEXT
               </NavLink>

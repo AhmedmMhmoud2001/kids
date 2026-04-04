@@ -108,6 +108,24 @@ export const translations = {
       cart: "Cart",
       account: "Account",
     },
+    contact: {
+      heading: "Contact Us",
+      getInTouch: "Get in Touch",
+      name: "Name",
+      email: "Email",
+      phone: "Phone",
+      address: "Address",
+      subject: "Subject",
+      message: "Message",
+      sending: "Sending...",
+      send: "Send Message",
+      success: "Thank you for your message! We will get back to you soon.",
+      error: "Something went wrong. Please try again."
+    },
+    bestSellers: {
+      title: "Best Sellers",
+      more: "More"
+    },
   },
   ar: {
     common: {
@@ -217,6 +235,24 @@ export const translations = {
       favorites: "المفضلة",
       cart: "السلة",
       account: "الحساب",
+    },
+    bestSellers: {
+      title: "الأكثر مبيعاً",
+      more: "المزيد"
+    },
+    contact: {
+      heading: "اتصل بنا",
+      getInTouch: "تواصل معنا",
+      name: "الاسم",
+      email: "البريد الإلكتروني",
+      phone: "الهاتف",
+      address: "العنوان",
+      subject: "الموضوع",
+      message: "الرسالة",
+      sending: "جارٍ الإرسال...",
+      send: "إرسال رسالة",
+      success: "شكرًا لك على رسالتك! سنرد عليك قريبًا.",
+      error: "حدث خطأ. الرجاء المحاولة مرة أخرى."
     },
   },
 };

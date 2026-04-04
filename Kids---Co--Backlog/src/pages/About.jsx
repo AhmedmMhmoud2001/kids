@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 import { fetchStaticPage } from '../api/staticPages';
+import { SLUGS } from '../config/slugs';
 
 const About = () => {
+  const { language, t } = useLanguage();
+  const isRTL = language === 'ar';
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -11,8 +15,8 @@ const About = () => {
     const loadPage = async () => {
       try {
         setLoading(true);
-        // Assuming 'about-us' is the slug in the backend
-        const response = await fetchStaticPage('about-us');
+        // Slug aligned with backend CMS (configurable via SLUGS)
+        const response = await fetchStaticPage(SLUGS.ABOUT);
         if (response.success) {
           setPageData(response.data);
         } else {
@@ -31,32 +35,33 @@ const About = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500">
-        </div>
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center" dir={isRTL ? 'rtl' : 'ltr'}>
+        <span>Loading content...</span>
       </div>
     );
   }
-
-  // Fallback to static content if API fails or no data, 
-  // currently we'll just show the dynamic content if available or error/empty.
-  // But to be safe and match user expectation of "connecting", if error we might want to show nothing or an error message.
-  // However, usually "About Us" fallback is good. Let's stick to the fetched content primarily.
 
   if (!pageData) {
-    // If no data found in backend (e.g. not created yet), show default structure or empty
-    // For this task, we will show the fetched content.
     return (
-      <div className="container mx-auto px-4 py-8 text-center text-gray-500">
-        {error ? <p>Error loading content.</p> : <p>Page not found.</p>}
+      <div className="container mx-auto px-4 py-8 text-center text-gray-500" dir={isRTL ? 'rtl' : 'ltr'}>
+        <p>Content not available</p>
       </div>
     );
   }
 
+  // Select localized content if available
+  const localizedContent = language === 'ar' && pageData.contentAr
+    ? pageData.contentAr
+    : language === 'en' && pageData.contentEn
+      ? pageData.contentEn
+      : pageData.content;
+  // Localized title if available
+  const localizedTitle = language === 'ar' && pageData.titleAr ? pageData.titleAr : pageData.title;
+
   return (
-    <div className="container mx-auto px-4 sm:px-6 md:px-10 lg:px-20 py-8">
+    <div className="container mx-auto px-4 sm:px-6 md:px-10 lg:px-20 py-8" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className=" mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">{pageData.title}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">{localizedTitle}</h1>
         <div className="max-w-7xl overflow-hidden">
           <div
             className="
@@ -68,11 +73,9 @@ const About = () => {
                       prose-a:break-all
                       prose-pre:whitespace-pre-wrap
                     "
-            dangerouslySetInnerHTML={{ __html: pageData.content }}
+            dangerouslySetInnerHTML={{ __html: localizedContent }}
           />
         </div>
-
-
 
         <div className="mt-8">
           <Link

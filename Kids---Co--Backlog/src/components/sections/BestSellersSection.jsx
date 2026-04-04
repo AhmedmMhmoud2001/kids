@@ -15,7 +15,7 @@ import 'swiper/css/pagination';
  */
 const BestSellersSection = ({
   products = [],
-  title = 'Best Sellers',
+  title = null,
   showMoreLink = true,
   moreLink = '/shop',
   limit = 10,
@@ -23,7 +23,7 @@ const BestSellersSection = ({
   onProductSelect
 }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const productsToShow = products.slice(0, limit);
 
@@ -34,17 +34,18 @@ const BestSellersSection = ({
     }
   };
 
+  const displayTitle = title || t('bestSellers.title') || 'Best Sellers';
   return (
     <>
       <Section padding="py-4 sm:py-5" className={className}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">{title}</h2>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">{displayTitle}</h2>
           {showMoreLink && (
             <Link
               to={moreLink}
               className="text-blue-500 hover:text-blue-600 font-medium text-sm sm:text-base"
             >
-              More
+              {t('bestSellers.more') || 'More'}
             </Link>
           )}
         </div>
@@ -53,7 +54,7 @@ const BestSellersSection = ({
         <div className="relative best-sellers-swiper">
           <Swiper
             key={language}
-            rtl={language === 'ar'}
+            rtl={language === 'ar' ? true : undefined}
             modules={[Navigation, Pagination, Autoplay]}
             spaceBetween={20}
             slidesPerView={1}
