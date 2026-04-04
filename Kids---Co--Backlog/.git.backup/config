@@ -1,0 +1,19 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[remote "origin"]
+	url = git@github.com:AhmedmMhmoud2001/Kids---Co--Backlog.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+	remote = origin
+	vscode-merge-base = origin/master
+	merge = refs/heads/master
+[branch "feature/new-branch"]
+	remote = origin
+	merge = refs/heads/feature/new-branch
+	vscode-merge-base = origin/master
+	vscode-merge-base = origin/master

@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+.brand-wordmark {
+  font-family: "Playfair Display", serif;
+  /* Close to the image style */
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  /* Kerning close to RiverIsland */
+}
+
+@layer base {
+  body {
+    @apply font-sans text-gray-900 bg-white transition-colors duration-300;
+  }
+
+  html.dark body {
+    @apply text-slate-100 bg-slate-950;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Global dark-mode adaptation for dashboard content cards/layouts */
+html.dark .dashboard-shell .bg-white {
+  background-color: rgb(15 23 42) !important;
+}
+
+html.dark .dashboard-shell .bg-gray-50,
+html.dark .dashboard-shell .bg-gray-50\/50,
+html.dark .dashboard-shell .bg-gray-100,
+html.dark .dashboard-shell .bg-slate-50 {
+  background-color: rgb(30 41 59) !important;
+}
+
+html.dark .dashboard-shell .text-gray-900,
+html.dark .dashboard-shell .text-gray-800 {
+  color: rgb(241 245 249) !important;
+}
+
+html.dark .dashboard-shell .text-gray-700,
+html.dark .dashboard-shell .text-gray-600,
+html.dark .dashboard-shell .text-gray-500 {
+  color: rgb(148 163 184) !important;
+}
+
+html.dark .dashboard-shell .border-gray-100,
+html.dark .dashboard-shell .border-gray-200,
+html.dark .dashboard-shell .border-gray-300 {
+  border-color: rgb(51 65 85) !important;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded transition-colors;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+
+    /* Prevent text selection on mobile for better UX */
+    .no-select {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Better tap highlights */
+    * {
+      -webkit-tap-highlight-color: rgba(99, 173, 252, 0.1);
+    }
+  }
+}
+
+@layer utilities {
+
+  /* Animations */
+  @keyframes slideInLeft {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideInBottom {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  .animate-slide-in-bottom {
+    animation: slideInBottom 0.3s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+}
+
+/* Swiper Customization */
+.best-sellers-swiper .swiper-button-next,
+.best-sellers-swiper .swiper-button-prev {
+  color: #63adfc !important;
+  background: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.best-sellers-swiper .swiper-button-next:after,
+.best-sellers-swiper .swiper-button-prev:after {
+  font-size: 18px !important;
+  font-weight: bold;
+}
+
+.best-sellers-swiper .swiper-button-next:hover,
+.best-sellers-swiper .swiper-button-prev:hover {
+  background: #63adfc;
+  color: white !important;
+}
+
+.best-sellers-swiper .swiper-pagination-bullet {
+  background: #d1d5db !important;
+  opacity: 1 !important;
+  width: 8px;
+  height: 8px;
+}
+
+.best-sellers-swiper .swiper-pagination-bullet-active {
+  background: #63adfc !important;
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* Hide scrollbar while keeping functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* Modern Scrollbar utility */
+.modern-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+}
+
+.modern-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* React Quill Custom Styling */
+.quill {
+  display: flex;
+  flex-direction: column;
+}
+
+.ql-toolbar.ql-snow {
+  border: 1px solid #e2e8f0 !important;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  background-color: #f8fafc;
+  padding: 12px !important;
+}
+
+.ql-container.ql-snow {
+  border: 1px solid #e2e8f0 !important;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  font-family: inherit !important;
+  font-size: 1rem !important;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ql-editor {
+  min-height: 400px;
+  padding: 20px !important;
+}
+
+.ql-editor.ql-blank::before {
+  color: #94a3b8 !important;
+  font-style: normal !important;
+}

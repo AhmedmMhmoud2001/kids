@@ -1,0 +1,59 @@
+{
+  "name": "fullstack_kids_backend",
+  "version": "1.0.0",
+  "description": "Backend for Fullstack Kids E-commerce",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "seed:catalog": "node src/seed-catalog.js",
+    "seed:categories:kids-next": "node src/seed-categories-kids-next.js",
+    "seed:products:linked": "node src/seed-products-linked.js",
+    "seed:offers-coupons": "node src/seed-offers-coupons.js",
+    "seed:rbac": "node src/seed-rbac.js",
+    "seed:kids-products": "node src/seed-kids-products-full.js",
+    "seed:next-products": "node src/seed-next-products-full.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@prisma/adapter-planetscale": "^7.2.0",
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.13.5",
+    "bcrypt": "^6.0.0",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.3.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "mysql2": "^3.16.1",
+    "node-cache": "^5.1.2",
+    "nodemailer": "^7.0.13",
+    "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0",
+    "passport-google-oauth20": "^2.0.0",
+    "prisma": "^5.22.0",
+    "sharp": "^0.34.5",
+    "socket.io": "^4.8.3",
+    "stripe": "^20.3.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
+}

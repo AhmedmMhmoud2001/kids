@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: #f8fafc;
+    --color-card: #ffffff;
+    --color-border: #e2e8f0;
+    --color-text: #0f172a;
+  }
+
+  .dark {
+    --color-bg: #0f172a;
+    --color-card: #1e293b;
+    --color-border: #334155;
+    --color-text: #f1f5f9;
+  }
+
+  body {
+    @apply font-sans text-gray-900 bg-white;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  .dark body {
+    @apply bg-[var(--color-bg)] text-[var(--color-text)];
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded transition-colors;
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    /* Prevent text selection on mobile for better UX */
+    .no-select {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    /* Better tap highlights */
+    * {
+      -webkit-tap-highlight-color: rgba(99, 173, 252, 0.1);
+    }
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  @keyframes slideInLeft {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideInBottom {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+  
+  .animate-slide-in-bottom {
+    animation: slideInBottom 0.3s ease-out;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+}
+
+/* Swiper Customization */
+.best-sellers-swiper .swiper-button-next,
+.best-sellers-swiper .swiper-button-prev {
+  color: #63adfc !important;
+  background: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.best-sellers-swiper .swiper-button-next:after,
+.best-sellers-swiper .swiper-button-prev:after {
+  font-size: 18px !important;
+  font-weight: bold;
+}
+
+.best-sellers-swiper .swiper-button-next:hover,
+.best-sellers-swiper .swiper-button-prev:hover {
+  background: #63adfc;
+  color: white !important;
+}
+
+.best-sellers-swiper .swiper-pagination-bullet {
+  background: #d1d5db !important;
+  opacity: 1 !important;
+  width: 8px;
+  height: 8px;
+}
+
+.best-sellers-swiper .swiper-pagination-bullet-active {
+  background: #63adfc !important;
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* Hide scrollbar while keeping functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+

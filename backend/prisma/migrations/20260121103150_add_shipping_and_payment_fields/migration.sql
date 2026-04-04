@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `orders` ADD COLUMN `paymentMethod` VARCHAR(191) NOT NULL DEFAULT 'COD',
+    ADD COLUMN `paymentStatus` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    ADD COLUMN `phone` VARCHAR(191) NULL,
+    ADD COLUMN `shippingAddress` VARCHAR(191) NULL;
