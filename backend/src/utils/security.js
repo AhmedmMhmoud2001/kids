@@ -22,7 +22,11 @@ const COOKIE_OPTIONS = {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     path: '/',
     // Optional domain to support cross-subdomain cookies if needed
-    ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {})
+  ...(process.env.COOKIE_DOMAIN
+    ? { domain: process.env.COOKIE_DOMAIN }
+    : (process.env.NODE_ENV === 'production'
+        ? { domain: '.tovo-b.developteam.site' }
+        : {}))
 };
 
 const REFRESH_COOKIE_OPTIONS = {

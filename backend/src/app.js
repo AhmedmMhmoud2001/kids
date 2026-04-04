@@ -58,6 +58,11 @@ const corsOptions = {
     maxAge: 86400 // 24 hours
 };
 app.use(cors(corsOptions));
+// Ensure caches are aware of varying origins for CORS responses
+app.use((req, res, next) => {
+  res.setHeader('Vary', 'Origin');
+  next();
+});
 
 // Rate Limiting - Prevent brute force attacks
 const limiter = rateLimit({

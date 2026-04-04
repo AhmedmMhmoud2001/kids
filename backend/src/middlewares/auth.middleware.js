@@ -13,7 +13,15 @@ const extractToken = (req) => {
     
     // Check cookie
     if (req.cookies?.auth_token) {
+        if (process.env.NODE_ENV !== 'production') console.log('[auth] token from cookie');
         return req.cookies.auth_token;
+    }
+
+    // Debug: inspect all possible token sources (only in non-prod)
+    if (process.env.NODE_ENV !== 'production') {
+        if (req.headers?.authorization?.startsWith('Bearer ')) console.log('[auth] token from Authorization header');
+        if (req.headers['x-auth-token']) console.log('[auth] token from x-auth-token header');
+        if (req.query?.token) console.log('[auth] token from query');
     }
     // Backwards-compat: allow token in alternative headers or query (use cautiously)
     if (req.headers['x-auth-token']) {
@@ -23,6 +31,8 @@ const extractToken = (req) => {
         return req.query.token;
     }
     
+    // If none found
+    if (process.env.NODE_ENV !== 'production') console.log('[auth] no token found in sources');
     return null;
 };
 

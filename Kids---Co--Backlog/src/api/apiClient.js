@@ -123,6 +123,17 @@ export const stopTokenRefresh = () => {
  * @param {string} endpoint - API endpoint (e.g., '/auth/me')
  * @param {Object} options - Fetch options
  */
+// Helper to read a named cookie (simple parser)
+const readCookie = (name) => {
+  if (typeof document === 'undefined') return null;
+  const nameEq = `${name}=`;
+  const cookies = document.cookie.split(';').map(c => c.trim());
+  for (const c of cookies) {
+    if (c.startsWith(nameEq)) return c.substring(nameEq.length);
+  }
+  return null;
+};
+
 export const apiRequest = async (endpoint, options = {}) => {
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
     
@@ -139,18 +150,18 @@ export const apiRequest = async (endpoint, options = {}) => {
         }
     }
 
-    // Optional: attach a non-HttpOnly fallback token from localStorage if present
-    // This helps scenarios where the server expects a token in header when cookies aren't sent.
-    // Note: Only use as a fallback; prefer cookies for security.
+    // Prefer cookie-based token if available, fallback to localStorage token if present
     try {
-        if (!headers['Authorization'] && typeof window !== 'undefined') {
-            const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        if (!headers['Authorization']) {
+            const cookieToken = readCookie('auth_token');
+            const storageToken = (typeof window !== 'undefined') ? (localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')) : null;
+            const token = cookieToken || storageToken;
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
         }
     } catch (e) {
-        // ignore if storage is not available
+        // ignore if storage/cookies are not available
     }
     
     let response = await fetch(url, {

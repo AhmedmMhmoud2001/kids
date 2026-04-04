@@ -30,7 +30,7 @@ exports.login = async (req, res) => {
                 user: result.user,
                 redirectPath: result.redirectPath,
                 csrfToken, // Send CSRF token to client
-                // Don't send tokens in response body - they're in httpOnly cookies
+                token: result.token || null, // expose token for client storage (for development/testing)
                 expiresIn: '15m' // Tell client when to refresh
             }
         });
