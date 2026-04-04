@@ -20,7 +20,7 @@ const COOKIE_OPTIONS = {
     secure: process.env.NODE_ENV === 'production' || useCrossOriginCookies,
     sameSite: useCrossOriginCookies ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  path: '/kids',
+  path: '/',
   // Optional domain to support cross-subdomain cookies if needed
   ...(process.env.COOKIE_DOMAIN
     ? { domain: process.env.COOKIE_DOMAIN }
@@ -52,9 +52,9 @@ const setRefreshCookie = (res, refreshToken) => {
  * Clear authentication cookies
  */
 const clearAuthCookies = (res) => {
-    res.clearCookie('auth_token', { path: '/kids' });
-    res.clearCookie('refresh_token', { path: '/kids' });
-    res.clearCookie('csrf_token', { path: '/kids' });
+    res.clearCookie('auth_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/' });
+    res.clearCookie('csrf_token', { path: '/' });
 };
 
 // ============================================
@@ -169,7 +169,7 @@ const initializeSession = (res) => {
         secure: process.env.NODE_ENV === 'production' || useCrossOriginCookies,
         sameSite: useCrossOriginCookies ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
         maxAge: 24 * 60 * 60 * 1000,
-        path: '/kids'
+        path: '/'
     });
     
     return { sessionId, csrfToken };

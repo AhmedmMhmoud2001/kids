@@ -265,4 +265,9 @@ app.use((err, req, res, next) => {
     res.status(err.statusCode).json(response);
 });
 
+// Debug endpoint to inspect cookies sent by the client (development only)
+app.get('/debug/cookies', (req, res) => {
+  res.json({ headerCookie: req.headers.cookie || null, cookies: req.cookies || {} });
+});
+
 module.exports = app;

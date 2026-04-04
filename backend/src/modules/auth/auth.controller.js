@@ -23,18 +23,23 @@ exports.login = async (req, res) => {
         // Initialize CSRF session
         const { csrfToken } = initializeSession(res);
         
+        // Build response data; do not expose raw token in production
+        const responseData = {
+            user: result.user,
+            redirectPath: result.redirectPath,
+            csrfToken, // Send CSRF token to client
+            expiresIn: '15m' // Tell client when to refresh
+        };
+        if (process.env.NODE_ENV !== 'production') {
+            responseData.token = result.token || null; // development/testing only
+        }
         res.json({
             success: true,
             message: 'Login successful',
-            data: {
-                user: result.user,
-                redirectPath: result.redirectPath,
-                csrfToken, // Send CSRF token to client
-                token: result.token || null, // expose token for client storage (for development/testing)
-                expiresIn: '15m' // Tell client when to refresh
-            }
+            data: responseData
         });
     } catch (error) {
+        console.error('Login error:', error);
         res.status(401).json({
             success: false,
             message: error.message || 'Login failed'
@@ -123,15 +128,20 @@ exports.verifyEmail = async (req, res) => {
         // Initialize CSRF session
         const { csrfToken } = initializeSession(res);
 
+        // Build response data; do not expose raw token in production
+        const responseDataEmail = {
+            user: result.user,
+            redirectPath: result.redirectPath,
+            csrfToken,
+            expiresIn: '15m'
+        };
+        if (process.env.NODE_ENV !== 'production') {
+            responseDataEmail.token = result.token || null; // development/testing only
+        }
         res.json({
             success: true,
             message: 'Email verified successfully',
-            data: {
-                user: result.user,
-                redirectPath: result.redirectPath,
-                csrfToken,
-                expiresIn: '15m'
-            }
+            data: responseDataEmail
         });
     } catch (error) {
         res.status(400).json({
