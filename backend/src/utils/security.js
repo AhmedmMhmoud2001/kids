@@ -20,8 +20,8 @@ const COOKIE_OPTIONS = {
     secure: process.env.NODE_ENV === 'production' || useCrossOriginCookies,
     sameSite: useCrossOriginCookies ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    path: '/',
-    // Optional domain to support cross-subdomain cookies if needed
+  path: '/kids',
+  // Optional domain to support cross-subdomain cookies if needed
   ...(process.env.COOKIE_DOMAIN
     ? { domain: process.env.COOKIE_DOMAIN }
     : (process.env.NODE_ENV === 'production'
@@ -52,9 +52,9 @@ const setRefreshCookie = (res, refreshToken) => {
  * Clear authentication cookies
  */
 const clearAuthCookies = (res) => {
-    res.clearCookie('auth_token', { path: '/' });
-    res.clearCookie('refresh_token', { path: '/' });
-    res.clearCookie('csrf_token', { path: '/' });
+    res.clearCookie('auth_token', { path: '/kids' });
+    res.clearCookie('refresh_token', { path: '/kids' });
+    res.clearCookie('csrf_token', { path: '/kids' });
 };
 
 // ============================================
@@ -168,7 +168,8 @@ const initializeSession = (res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production' || useCrossOriginCookies,
         sameSite: useCrossOriginCookies ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/kids'
     });
     
     return { sessionId, csrfToken };
