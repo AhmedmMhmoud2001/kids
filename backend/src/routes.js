@@ -36,4 +36,20 @@ router.get('/health', (req, res) => {
     });
 });
 
+// Dynamic API base URL config (frontend can consume this)
+// - APP_CONFIG_SOURCE controls the source of API base URL
+//   'server' => use BACKEND_URL for production, or local default
+//   'client' => defer to frontend-provided base URL (e.g., VITE_API_BASE_URL)
+router.get('/config', (req, res) => {
+    const source = process.env.APP_CONFIG_SOURCE || 'client';
+    let apiBaseUrl;
+    if (source === 'server') {
+        apiBaseUrl = process.env.BACKEND_URL || 'https://tovo-b.developteam.site/kids/api';
+    } else {
+        // Client-driven: frontend should provide its own URL via environment or proxy
+        apiBaseUrl = process.env.VITE_API_BASE_URL || '';
+    }
+    res.json({ apiBaseUrl, mode: source });
+});
+
 module.exports = router;
