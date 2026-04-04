@@ -138,6 +138,20 @@ export const apiRequest = async (endpoint, options = {}) => {
             headers['X-CSRF-Token'] = csrfToken;
         }
     }
+
+    // Optional: attach a non-HttpOnly fallback token from localStorage if present
+    // This helps scenarios where the server expects a token in header when cookies aren't sent.
+    // Note: Only use as a fallback; prefer cookies for security.
+    try {
+        if (!headers['Authorization'] && typeof window !== 'undefined') {
+            const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+        }
+    } catch (e) {
+        // ignore if storage is not available
+    }
     
     let response = await fetch(url, {
         ...options,

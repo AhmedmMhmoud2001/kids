@@ -20,7 +20,9 @@ const COOKIE_OPTIONS = {
     secure: process.env.NODE_ENV === 'production' || useCrossOriginCookies,
     sameSite: useCrossOriginCookies ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    path: '/'
+    path: '/',
+    // Optional domain to support cross-subdomain cookies if needed
+    ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {})
 };
 
 const REFRESH_COOKIE_OPTIONS = {
