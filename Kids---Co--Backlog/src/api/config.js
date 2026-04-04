@@ -15,8 +15,23 @@ function isLocalOrigin() {
   return o.startsWith('http://localhost') || o.startsWith('http://127.0.0.1');
 }
 
-// خارج localhost = نستخدم الإنتاج دائمًا (نتجاهل VITE_* لو كانت localhost)
-export const API_BASE_URL = isLocalOrigin() ? (import.meta.env.VITE_API_URL || LOCAL_API) : PRODUCTION_API;
+// Determine base API URL dynamically based on origin
+// If running on production domain, use same-origin with /kids path when deployed under /kids
+export const API_BASE_URL = (() => {
+  try {
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin || '';
+      // If you're serving the frontend under /kids on the production domain, prefer origin + '/kids/api'
+      if (origin.includes('tovo-b.developteam.site')) {
+        // Normalize to avoid double /
+        return origin.replace(/\/$/, '') + '/kids/api';
+      }
+    }
+  } catch {
+    // fall back to default below
+  }
+  return isLocalOrigin() ? (import.meta?.env?.VITE_API_URL || LOCAL_API) : PRODUCTION_API;
+})();
 export const API_HOST = isLocalOrigin() ? (import.meta.env.VITE_API_HOST || LOCAL_HOST) : PRODUCTION_HOST;
 
 // Token refresh interval (in milliseconds)
