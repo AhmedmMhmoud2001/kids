@@ -159,15 +159,23 @@ export const apiRequest = async (endpoint, options = {}) => {
         credentials: 'include' // Important: include cookies in requests
     });
     
-    // Handle 401 Unauthorized - try to refresh token
+    // Handle 401 Unauthorized - try to refresh token proactively and retry
     if (response.status === 401) {
-        const data = await response.json();
-        
-        if (data.code === 'TOKEN_EXPIRED') {
+        let data = {};
+        try {
+            data = await response.json();
+        } catch {
+            data = {};
+        }
+
+        const shouldRetry =
+            data.code === 'TOKEN_EXPIRED' ||
+            data.code === 'AUTH_TOKEN_MISSING' ||
+            (typeof data.message === 'string' && data.message.toLowerCase().includes('token'));
+
+        if (shouldRetry) {
             try {
-                // Try to refresh the token
                 await refreshAccessToken();
-                
                 // Retry the original request
                 response = await fetch(url, {
                     ...options,
@@ -176,10 +184,13 @@ export const apiRequest = async (endpoint, options = {}) => {
                 });
             } catch (refreshError) {
                 // Refresh failed
+                clearCsrfToken();
+                localStorage.removeItem('user');
+                window.dispatchEvent(new CustomEvent('auth:expired'));
                 throw new Error('Session expired. Please log in again.');
             }
         } else {
-            // Other auth errors
+            // Other 401 reasons
             clearCsrfToken();
             localStorage.removeItem('user');
             window.dispatchEvent(new CustomEvent('auth:expired'));
