@@ -15,6 +15,13 @@ const extractToken = (req) => {
     if (req.cookies?.auth_token) {
         return req.cookies.auth_token;
     }
+    // Backwards-compat: allow token in alternative headers or query (use cautiously)
+    if (req.headers['x-auth-token']) {
+        return req.headers['x-auth-token'];
+    }
+    if (req.query?.token) {
+        return req.query.token;
+    }
     
     return null;
 };
