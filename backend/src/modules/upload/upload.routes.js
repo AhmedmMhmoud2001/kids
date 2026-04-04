@@ -55,7 +55,8 @@ router.post('/', authenticate, upload.single('image'), convertToWebP, (req, res)
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        const baseUrl = (process.env.BACKEND_URL || 'http://tovo-b.developteam.site/kids').replace(/\/$/, '');
+        const PRODUCTION_BASE = 'https://tovo-b.developteam.site/kids';
+        const baseUrl = (process.env.BACKEND_URL || PRODUCTION_BASE).replace(/\/$/, '');
         const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
         res.json({
@@ -88,7 +89,8 @@ router.post('/user-image', authenticate, upload.single('image'), async (req, res
         const uploadDir = path.join(__dirname, '../../../uploads/users');
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-        const base = (process.env.BACKEND_URL || 'http://tovo-b.developteam.site/kids').replace(/\/$/, '');
+        const PRODUCTION_BASE = 'https://tovo-b.developteam.site/kids';
+        const base = (process.env.BACKEND_URL || PRODUCTION_BASE).replace(/\/$/, '');
         const baseUrl = `${base}/uploads/users`;
 
         const { data: buffer, info } = await processImage(req.file.buffer, {
@@ -131,7 +133,8 @@ router.post('/brand', authenticate, upload.single('image'), async (req, res) => 
         const uploadDir = path.join(__dirname, '../../../uploads/brands');
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-        const base = (process.env.BACKEND_URL || 'http://tovo-b.developteam.site/kids').replace(/\/$/, '');
+        const PRODUCTION_BASE = 'https://tovo-b.developteam.site/kids';
+        const base = (process.env.BACKEND_URL || PRODUCTION_BASE).replace(/\/$/, '');
         const baseUrl = `${base}/uploads/brands`;
 
         const { data: buffer, info } = await processImage(req.file.buffer, {
@@ -173,7 +176,8 @@ router.post('/category', authenticate, upload.single('image'), async (req, res) 
         const uploadDir = path.join(__dirname, '../../../uploads/categories');
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-        const base = (process.env.BACKEND_URL || 'http://tovo-b.developteam.site/kids').replace(/\/$/, '');
+        const PRODUCTION_BASE = 'https://tovo-b.developteam.site/kids';
+        const base = (process.env.BACKEND_URL || PRODUCTION_BASE).replace(/\/$/, '');
         const baseUrl = `${base}/uploads/categories`;
 
         const { data: buffer, info } = await processImage(req.file.buffer, {
@@ -215,7 +219,8 @@ router.post('/product', authenticate, upload.array('images', 8), async (req, res
         const uploadDir = path.join(__dirname, '../../../uploads/products');
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-        const base = (process.env.BACKEND_URL || 'http://tovo-b.developteam.site/kids').replace(/\/$/, '');
+        const PRODUCTION_BASE = 'https://tovo-b.developteam.site/kids';
+        const base = (process.env.BACKEND_URL || PRODUCTION_BASE).replace(/\/$/, '');
         const baseUrl = `${base}/uploads/products`;
 
         const files = await Promise.all(req.files.map(async (file) => {

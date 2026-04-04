@@ -15,6 +15,7 @@
     "seed:offers-coupons": "node src/seed-offers-coupons.js",
     "seed:rbac": "node src/seed-rbac.js",
     "seed:kids-products": "node src/seed-kids-products-full.js",
+    "seed:all": "node seed-all.js",
     "seed:next-products": "node src/seed-next-products-full.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
