@@ -42,6 +42,8 @@ const extractToken = (req) => {
  */
 exports.authenticate = (req, res, next) => {
     const token = extractToken(req);
+    console.log("token",token);
+    
 
     if (!token) {
         return res.status(401).json({

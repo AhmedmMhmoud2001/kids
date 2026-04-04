@@ -101,6 +101,7 @@ export const startTokenRefresh = () => {
     // Refresh token before it expires
     refreshTimer = setInterval(async () => {
         try {
+            console.log('Refreshing token');
             await refreshAccessToken();
         } catch (error) {
             // Error handled in refreshAccessToken

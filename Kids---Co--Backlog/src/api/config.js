@@ -30,6 +30,9 @@ export const API_BASE_URL = (() => {
   } catch {
     // fall back to default below
   }
+
+  console.log(isLocalOrigin());
+  console.log(isLocalOrigin() ? (import.meta?.env?.VITE_API_URL || LOCAL_API) : PRODUCTION_API);
   return isLocalOrigin() ? (import.meta?.env?.VITE_API_URL || LOCAL_API) : PRODUCTION_API;
 })();
 export const API_HOST = isLocalOrigin() ? (import.meta.env.VITE_API_HOST || LOCAL_HOST) : PRODUCTION_HOST;

@@ -44,7 +44,17 @@ router.get('/config', (req, res) => {
     const source = process.env.APP_CONFIG_SOURCE || 'client';
     let apiBaseUrl;
     if (source === 'server') {
-        apiBaseUrl = process.env.BACKEND_URL || 'https://tovo-b.developteam.site/kids/api';
+        // Prefer explicit BACKEND_URL if provided
+        if (process.env.BACKEND_URL) {
+            apiBaseUrl = process.env.BACKEND_URL;
+        } else if (process.env.BACKEND_DOMAIN) {
+            // Build URL from domain if BACKEND_URL is not set
+            const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+            apiBaseUrl = `${protocol}://${process.env.BACKEND_DOMAIN}/kids/api`;
+        } else {
+            // Fallback to a sensible default in case none is provided
+            apiBaseUrl = 'https://tovo-b.developteam.site/kids/api';
+        }
     } else {
         // Client-driven: frontend should provide its own URL via environment or proxy
         apiBaseUrl = process.env.VITE_API_BASE_URL || '';

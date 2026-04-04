@@ -33,6 +33,9 @@ exports.login = async (req, res) => {
         if (process.env.NODE_ENV !== 'production') {
             responseData.token = result.token || null; // development/testing only
         }
+        setAuthCookie(res, result.token);
+        setRefreshCookie(res, result.refreshToken);
+        
         res.json({
             success: true,
             message: 'Login successful',
