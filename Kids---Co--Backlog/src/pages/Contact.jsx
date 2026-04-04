@@ -55,11 +55,15 @@ const Contact = () => {
     setIsSubmitting(true);
     setStatus({ type: '', message: '' });
     try {
-      // Here you would call your existing API to submit, e.g. submitContactMessage(formData)
-      setStatus({ type: 'success', message: t('contact.success') || 'Thank you for your message! We will get back to you soon.' });
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      const resp = await submitContactMessage(formData);
+      if (resp?.success) {
+        setStatus({ type: 'success', message: t('contact.success') || 'Thank you for your message! We will get back to you soon.' });
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        setStatus({ type: 'error', message: resp?.message || (t('contact.error') || 'Something went wrong. Please try again.') });
+      }
     } catch (err) {
-      setStatus({ type: 'error', message: (err?.message && t('contact.error')) || 'Something went wrong. Please try again.' });
+      setStatus({ type: 'error', message: err?.message || (t('contact.error') || 'Something went wrong. Please try again.') });
     } finally {
       setIsSubmitting(false);
     }
