@@ -52,9 +52,9 @@ const BestSellersSection = ({
 
         {/* Product Carousel with Swiper */}
         <div className="relative best-sellers-swiper">
+          <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
           <Swiper
             key={language}
-            rtl={language === 'ar' ? true : undefined}
             modules={[Navigation, Pagination, Autoplay]}
             spaceBetween={20}
             slidesPerView={1}
@@ -94,6 +94,7 @@ const BestSellersSection = ({
               </SwiperSlide>
             ))}
           </Swiper>
+          </div>
         </div>
       </Section>
 

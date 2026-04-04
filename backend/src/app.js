@@ -36,8 +36,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').filter(Boolean).l
         'http://localhost:3000',
         'http://localhost:5174',
         'https://tovo-b.developteam.site',
-        'https://fullstack-kids.vercel.app',
-        'https://kids-co-backlog.vercel.app'
+        'https://kids-mu-nine.vercel.app',
+        'https://kidsfrontend.vercel.app'
     ];
 
 const corsOptions = {

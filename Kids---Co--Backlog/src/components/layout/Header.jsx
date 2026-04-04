@@ -99,9 +99,9 @@ const Header = () => {
         <div className="container mx-auto flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
             {offers.length > 0 ? (
+              <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
               <Swiper
                 key={language}
-                rtl={language === 'ar' ? true : undefined}
                 modules={[Autoplay]}
                 slidesPerView={1}
                 loop={offers.length > 1}
@@ -124,6 +124,7 @@ const Header = () => {
                   );
                 })}
               </Swiper>
+              </div>
             ) : (
               <p className="text-center truncate">{t("header.banner")}</p>
             )}

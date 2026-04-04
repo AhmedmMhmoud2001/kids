@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchStaticPage } from '../api/staticPages';
+import { submitContactMessage } from '../api/contact';
 import { SLUGS } from '../config/slugs';
 
 // Contact page that can be fully replaced by CMS data
