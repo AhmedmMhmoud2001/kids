@@ -607,33 +607,35 @@ const ProductDetail = () => {
           </div>
 
           <div className="relative">
-            <Swiper
-              key={language}
-              rtl={language === 'ar'}
-              modules={[Pagination, Autoplay]}
-              spaceBetween={20}
-              slidesPerView={1}
-
-              pagination={{ clickable: true, dynamicBullets: true }}
-              autoplay={{
-                delay: 4000,
-                disableOnInteraction: false,
-                pauseOnMouseEnter: true,
-              }}
-              breakpoints={{
-                480: { slidesPerView: 2, spaceBetween: 15 },
-                768: { slidesPerView: 3, spaceBetween: 20 },
-                1024: { slidesPerView: 4, spaceBetween: 24 },
-                1280: { slidesPerView: 5, spaceBetween: 24 },
-              }}
-              className="!pb-12"
-            >
-              {relatedProducts.map((p) => (
-                <SwiperSlide key={p.id}>
-                  <ProductCard product={p} />
-                </SwiperSlide>
-              ))}
-            </Swiper>
+            <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <Swiper
+                key={language}
+                modules={[Pagination, Autoplay]}
+                spaceBetween={20}
+                slidesPerView={1}
+                observer
+                observeParents
+                pagination={{ clickable: true, dynamicBullets: true }}
+                autoplay={{
+                  delay: 4000,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }}
+                breakpoints={{
+                  480: { slidesPerView: 2, spaceBetween: 15 },
+                  768: { slidesPerView: 3, spaceBetween: 20 },
+                  1024: { slidesPerView: 4, spaceBetween: 24 },
+                  1280: { slidesPerView: 5, spaceBetween: 24 },
+                }}
+                className="!pb-12"
+              >
+                {relatedProducts.map((p) => (
+                  <SwiperSlide key={p.id}>
+                    <ProductCard product={p} />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
           </div>
         </Section>
       )}
