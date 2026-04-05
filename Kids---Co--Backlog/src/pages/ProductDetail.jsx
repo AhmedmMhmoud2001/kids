@@ -14,6 +14,7 @@ import ProductCard from '../components/product/ProductCard';
 import Section from '../components/common/Section';
 import { fetchProducts } from '../api/products';
 import { DEFAULT_CURRENCY, formatPrice } from '../utils/currency';
+import { renderLocalized } from '../utils/localized';
 import { useProductOfferDiscount } from '../hooks/useOffers';
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -485,7 +486,7 @@ const ProductDetail = () => {
           <div className="w-full max-w-full">
             <h3 className="font-semibold text-sm sm:text-base mb-1.5 sm:mb-2">{t('productDetail.description')}:</h3>
             <p className="text-gray-600 text-xs sm:text-sm leading-relaxed break-words">
-              {product.description}
+              {renderLocalized(product.description, language)}
             </p>
           </div>
           {/* Product Meta */}

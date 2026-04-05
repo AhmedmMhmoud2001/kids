@@ -5,10 +5,11 @@ import { fetchProducts, deleteProduct } from '../api/products';
 import { fetchSettings } from '../api/settings';
 import { getSafeImageUrl, getProductDisplayImage, getProductAllImages } from '../utils/imageUtils';
 import { useLanguage } from '../context/LanguageContext';
+import { renderLocalized } from '../utils/localized';
 import { tx } from '../i18n/text';
 
 const ProductsList = ({ audience, title }) => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const navigate = useNavigate();
     const location = useLocation();
     const [products, setProducts] = useState([]);
@@ -553,7 +554,7 @@ const ProductsList = ({ audience, title }) => {
                             {selectedProduct.description && (
                                 <div>
                                     <p className="text-sm text-gray-600 mb-1">Description</p>
-                                    <p className="text-gray-800">{selectedProduct.description}</p>
+                                    <p className="text-gray-800">{renderLocalized(selectedProduct.description, language)}</p>
                                 </div>
                             )}
 
