@@ -1,0 +1,6 @@
+# Claude Code local tooling — never commit these
+.claude/
+.claude
+.claude*
+CLAUDE.md
+**/CLAUDE.md
