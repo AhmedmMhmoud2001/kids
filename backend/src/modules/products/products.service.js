@@ -138,7 +138,10 @@ exports.create = async (data) => {
                             price: v.price != null && v.price !== '' ? Number(v.price) : 0,
                             stock: Math.max(0, parseInt(v.stock, 10) || 0),
                             lowStockThreshold,
-                            sku
+                            sku,
+                            externalSku: v.externalSku ? String(v.externalSku).trim() : null,
+                            externalColor: v.externalColor ? String(v.externalColor).trim() : null,
+                            externalSize: v.externalSize ? String(v.externalSize).trim() : null
                         }
                     });
                 } catch (err) {
@@ -393,6 +396,9 @@ exports.update = async (id, data) => {
         brandId: rest.brandId != null && rest.brandId !== '' ? String(rest.brandId) : null
     };
     if (data.basePrice != null && data.basePrice !== '') updateData.basePrice = Number(data.basePrice);
+    // next.co.uk source fields (optional, NEXT audience). Empty string clears the field; `undefined` leaves it alone.
+    if (rest.sourceUrl !== undefined) updateData.sourceUrl = rest.sourceUrl === '' ? null : String(rest.sourceUrl).trim();
+    if (rest.externalSku !== undefined) updateData.externalSku = rest.externalSku === '' ? null : String(rest.externalSku).trim();
 
     const includeBase = { category: true, brandRel: true };
     const includeFull = { ...includeBase, variants: { include: { color: true, size: true } }, colorImages: { include: { color: true } } };
@@ -443,17 +449,22 @@ exports.update = async (id, data) => {
             const price = v.price != null && v.price !== '' ? Number(v.price) : 0;
             const stock = Math.max(0, parseInt(v.stock, 10) || 0);
             const lowStockThreshold = v.lowStockThreshold != null && v.lowStockThreshold !== '' ? Math.max(0, parseInt(v.lowStockThreshold, 10)) : null;
+            // next.co.uk external fields (optional). Only included in the update when provided.
+            const externalPatch = {};
+            if (v.externalSku !== undefined) externalPatch.externalSku = v.externalSku === '' ? null : String(v.externalSku).trim();
+            if (v.externalColor !== undefined) externalPatch.externalColor = v.externalColor === '' ? null : String(v.externalColor).trim();
+            if (v.externalSize !== undefined) externalPatch.externalSize = v.externalSize === '' ? null : String(v.externalSize).trim();
 
             try {
                 if (v.id && existingMap.has(v.id)) {
                     await prisma.productVariant.update({
                         where: { id: v.id },
-                        data: { colorId, sizeId, price, stock, lowStockThreshold, sku }
+                        data: { colorId, sizeId, price, stock, lowStockThreshold, sku, ...externalPatch }
                     });
                 } else {
                     const newSku = sku || `${baseSku}-${idx + 1}`;
                     await prisma.productVariant.create({
-                        data: { productId, colorId, sizeId, price, stock, lowStockThreshold, sku: newSku }
+                        data: { productId, colorId, sizeId, price, stock, lowStockThreshold, sku: newSku, ...externalPatch }
                     });
                 }
             } catch (err) {
@@ -566,13 +577,17 @@ exports.delete = async (id) => {
 };
 
 // --- Excel: Export / Template / Import (KIDS or NEXT) ---
-// Columns in order: productId, variantId, name, description, categorySlug, brandName, basePrice, isActive, isBestSeller, color, size, price, stock, lowStockThreshold, sku, image1..image8
+// Columns in order: productId, variantId, productSku, name, description, categorySlug, brandName, basePrice, isActive, isBestSeller,
+//                   color, size, price, stock, lowStockThreshold, sku, image1..image8,
+//                   sourceUrl, externalSku, variantExternalSku, externalColor, externalSize
+// The last five are optional and used by the next.co.uk cart-push feature (NEXT audience only).
 // Export uses sku and variantId as row keys; images as URL text only (no embedding, no download).
 const MAX_IMAGES_PER_COLOR = 8;
 const EXCEL_HEADERS = [
     'productId', 'variantId', 'productSku', 'name', 'description', 'categorySlug', 'brandName', 'basePrice', 'isActive', 'isBestSeller',
     'color', 'size', 'price', 'stock', 'lowStockThreshold', 'sku',
-    ...Array.from({ length: MAX_IMAGES_PER_COLOR }, (_, i) => `image${i + 1}`)
+    ...Array.from({ length: MAX_IMAGES_PER_COLOR }, (_, i) => `image${i + 1}`),
+    'sourceUrl', 'externalSku', 'variantExternalSku', 'externalColor', 'externalSize'
 ];
 
 /** Export products to Excel buffer. Only products for the given audience (KIDS or NEXT); no mixing. One row per variant; images as URLs only. */
@@ -607,11 +622,17 @@ exports.exportExcel = async (audience) => {
                 rows.push([
                     p.id, v.id, p.sku ?? '', p.name, p.description ?? '', categorySlug, brandName, basePrice, isActive, isBestSeller,
                     v.color?.name ?? '', v.size?.name ?? '', v.price ?? '', v.stock ?? 0, v.lowStockThreshold ?? '', v.sku ?? '',
-                    ...imageCells
+                    ...imageCells,
+                    p.sourceUrl ?? '', p.externalSku ?? '', v.externalSku ?? '', v.externalColor ?? '', v.externalSize ?? ''
                 ]);
             }
         } else {
-            rows.push([p.id, '', p.sku ?? '', p.name, p.description ?? '', categorySlug, brandName, basePrice, isActive, isBestSeller, '', '', '', 0, '', '', ...Array(MAX_IMAGES_PER_COLOR).fill('')]);
+            rows.push([
+                p.id, '', p.sku ?? '', p.name, p.description ?? '', categorySlug, brandName, basePrice, isActive, isBestSeller,
+                '', '', '', 0, '', '',
+                ...Array(MAX_IMAGES_PER_COLOR).fill(''),
+                p.sourceUrl ?? '', p.externalSku ?? '', '', '', ''
+            ]);
         }
     }
 
@@ -623,7 +644,18 @@ exports.exportExcel = async (audience) => {
 
 /** Return Excel template buffer. audience = 'KIDS' | 'NEXT' */
 exports.getTemplateBuffer = (audience) => {
-    const exampleRow = ['', '', 'PRD-EXT-001', 'Example Product', 'Description', 'clothing', 'Nike', '99.99', '1', '0', 'Red', 'M', '99.99', '10', '5', 'SKU-001', ...Array(MAX_IMAGES_PER_COLOR).fill('')];
+    const isNext = audience === 'NEXT';
+    const sourceUrlExample = isNext ? 'https://www.next.co.uk/style/y97922/1' : '';
+    const externalSkuExample = isNext ? 'Y97-922' : '';
+    const variantExternalSkuExample = isNext ? 'Y97-922-BLUE-M' : '';
+    const externalColorExample = isNext ? 'Royal Blue' : '';
+    const externalSizeExample = isNext ? 'M' : '';
+    const exampleRow = [
+        '', '', 'PRD-EXT-001', 'Example Product', 'Description', 'clothing', 'Nike', '99.99', '1', '0',
+        'Red', 'M', '99.99', '10', '5', 'SKU-001',
+        ...Array(MAX_IMAGES_PER_COLOR).fill(''),
+        sourceUrlExample, externalSkuExample, variantExternalSkuExample, externalColorExample, externalSizeExample
+    ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([EXCEL_HEADERS, exampleRow]);
     XLSX.utils.book_append_sheet(wb, ws, 'Template');
@@ -636,6 +668,23 @@ async function resolveCategoryId(categorySlug, audience) {
     const cat = await prisma.category.findFirst({ where: { slug: String(categorySlug).trim(), audience } });
     if (!cat) throw AppError.badRequest(`Category "${categorySlug}" not found for ${audience}.`);
     return cat.id;
+}
+
+/**
+ * Like resolveCategoryId but auto-creates the category if it doesn't exist.
+ * Used by the scraper-driven import flow — next.co.uk's breadcrumb slugs (e.g. "flats",
+ * "trainers") change constantly and pre-seeding every category by hand is pointless.
+ */
+async function resolveOrCreateCategoryId(categorySlug, audience) {
+    if (!categorySlug) return null;
+    const slug = String(categorySlug).trim();
+    const existing = await prisma.category.findFirst({ where: { slug, audience } });
+    if (existing) return existing.id;
+    const name = slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const created = await prisma.category.create({
+        data: { name, slug, audience }
+    });
+    return created.id;
 }
 
 /** Resolve brandId by name (or slug). */
@@ -689,6 +738,12 @@ exports.importFromExcel = async (buffer, audience) => {
         const lowStockStr = getVal(row, 'lowStockThreshold');
         const sku = getVal(row, 'sku'); // variant sku
         const productSkuInput = getVal(row, 'productSku');
+        // next.co.uk source fields (optional; NEXT audience only)
+        const sourceUrlInput = getVal(row, 'sourceUrl');
+        const externalSkuInput = getVal(row, 'externalSku');
+        const variantExternalSkuInput = getVal(row, 'variantExternalSku');
+        const externalColorInput = getVal(row, 'externalColor');
+        const externalSizeInput = getVal(row, 'externalSize');
 
         if (!name && !productIdStr && !sku) continue;
         if (!colorName || !sizeName || !sku) {
@@ -727,7 +782,7 @@ exports.importFromExcel = async (buffer, audience) => {
         if (productId) {
             if (!processedProductIds.has(productId)) {
                 try {
-                    const categoryId = categorySlug ? await resolveCategoryId(categorySlug, audience) : existingProduct.categoryId;
+                    const categoryId = categorySlug ? await resolveOrCreateCategoryId(categorySlug, audience) : existingProduct.categoryId;
                     const brandId = brandName ? await resolveBrandId(brandName) : existingProduct.brandId;
                     const basePrice = basePriceStr !== '' ? parseFloat(basePriceStr) : existingProduct.basePrice;
                     const isActive = isActiveStr !== '' ? /^(1|true|yes)$/i.test(isActiveStr) : existingProduct.isActive;
@@ -744,6 +799,11 @@ exports.importFromExcel = async (buffer, audience) => {
                     const currentIsBestSeller = existingProduct.isBestSeller;
                     const currentSku = existingProduct.sku;
 
+                    const currentSourceUrl = existingProduct.sourceUrl;
+                    const currentExternalSku = existingProduct.externalSku;
+                    const newSourceUrl = sourceUrlInput !== '' ? sourceUrlInput : currentSourceUrl;
+                    const newExternalSku = externalSkuInput !== '' ? externalSkuInput : currentExternalSku;
+
                     let needsUpdate = false;
                     if (name && name !== currentName) needsUpdate = true;
                     if (description && description !== currentDesc) needsUpdate = true;
@@ -753,6 +813,8 @@ exports.importFromExcel = async (buffer, audience) => {
                     if (isActive !== currentIsActive) needsUpdate = true;
                     if (isBestSeller !== currentIsBestSeller) needsUpdate = true;
                     if (newSku !== currentSku) needsUpdate = true;
+                    if (newSourceUrl !== currentSourceUrl) needsUpdate = true;
+                    if (newExternalSku !== currentExternalSku) needsUpdate = true;
 
                     if (needsUpdate) {
                         await prisma.product.update({
@@ -765,7 +827,9 @@ exports.importFromExcel = async (buffer, audience) => {
                                 basePrice,
                                 isActive,
                                 isBestSeller,
-                                sku: newSku
+                                sku: newSku,
+                                sourceUrl: newSourceUrl,
+                                externalSku: newExternalSku
                             }
                         });
                         updated.products.push({ id: productId, name: name || existingProduct.name });
@@ -786,7 +850,7 @@ exports.importFromExcel = async (buffer, audience) => {
                 productId = productCache.get(cacheKey);
             } else {
                 try {
-                    const categoryId = await resolveCategoryId(categorySlug, audience);
+                    const categoryId = await resolveOrCreateCategoryId(categorySlug, audience);
                     const brandId = await resolveBrandId(brandName);
                     const basePrice = basePriceStr ? parseFloat(basePriceStr) : null;
                     const isActive = /^(1|true|yes)$/i.test(isActiveStr);
@@ -801,7 +865,9 @@ exports.importFromExcel = async (buffer, audience) => {
                             brandId,
                             basePrice,
                             isActive,
-                            isBestSeller
+                            isBestSeller,
+                            sourceUrl: sourceUrlInput || null,
+                            externalSku: externalSkuInput || null
                         }
                     });
                     productId = product.id;
@@ -840,12 +906,28 @@ exports.importFromExcel = async (buffer, audience) => {
             variant = await prisma.productVariant.findFirst({ where: { sku } });
         }
 
+        // Resolve next.co.uk variant fields. For NEXT audience, the external strings
+        // default to the display color/size so the extension has something to match on
+        // even when the scraper doesn't emit them explicitly.
+        const newExternalVariantSku = variantExternalSkuInput !== ''
+            ? variantExternalSkuInput
+            : (variant?.externalSku ?? null);
+        const newExternalColor = externalColorInput !== ''
+            ? externalColorInput
+            : (variant?.externalColor ?? (audience === 'NEXT' ? colorName : null));
+        const newExternalSize = externalSizeInput !== ''
+            ? externalSizeInput
+            : (variant?.externalSize ?? (audience === 'NEXT' ? sizeName : null));
+
         if (variant) {
             const same =
                 Math.abs(variant.price - price) < 0.01 &&
                 variant.stock === stock &&
                 (variant.lowStockThreshold ?? null) === lowStockThreshold &&
-                variant.sku === sku;
+                variant.sku === sku &&
+                (variant.externalSku ?? null) === (newExternalVariantSku ?? null) &&
+                (variant.externalColor ?? null) === (newExternalColor ?? null) &&
+                (variant.externalSize ?? null) === (newExternalSize ?? null);
 
             // Force update if the product changed
             const forceUpdate = updatedProductIds.has(productId);
@@ -856,7 +938,12 @@ exports.importFromExcel = async (buffer, audience) => {
                 try {
                     await prisma.productVariant.update({
                         where: { id: variant.id },
-                        data: { price, stock, lowStockThreshold, sku }
+                        data: {
+                            price, stock, lowStockThreshold, sku,
+                            externalSku: newExternalVariantSku,
+                            externalColor: newExternalColor,
+                            externalSize: newExternalSize
+                        }
                     });
                     updated.variants.push({ id: variant.id, sku });
                 } catch (err) {
@@ -874,7 +961,10 @@ exports.importFromExcel = async (buffer, audience) => {
                         price,
                         stock,
                         lowStockThreshold,
-                        sku
+                        sku,
+                        externalSku: newExternalVariantSku,
+                        externalColor: newExternalColor,
+                        externalSize: newExternalSize
                     }
                 });
                 created.variants.push({ id: newVariant.id, sku });

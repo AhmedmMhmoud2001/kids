@@ -491,6 +491,46 @@ exports.requestReturnByCustomer = async (orderId, userId, returnReason = null) =
     return exports.updateStatus(id, 'RETURNED', null, returnReason || 'Return requested by customer');
 };
 
+// Mark a batch of orders as fulfilled (e.g. after the admin completes the next.co.uk checkout
+// for a merged push). Independent of OrderStatus — does not touch stock or payment state.
+// Idempotent: orders that already have fulfilledAt set are not overwritten.
+exports.markFulfilled = async (orderIds, userId) => {
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+        throw new Error('orderIds is required and must contain at least one order');
+    }
+    const uniqueIds = Array.from(new Set(orderIds.filter(id => typeof id === 'string' && id.length > 0)));
+    if (uniqueIds.length === 0) {
+        throw new Error('orderIds is required and must contain at least one order');
+    }
+
+    const existing = await prisma.order.findMany({
+        where: { id: { in: uniqueIds } },
+        select: { id: true, fulfilledAt: true }
+    });
+    const foundIds = new Set(existing.map(o => o.id));
+    const missing = uniqueIds.filter(id => !foundIds.has(id));
+    if (missing.length) {
+        const err = new Error(`Order(s) not found: ${missing.join(', ')}`);
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Idempotent: only flip the ones that aren't already fulfilled.
+    const toFlip = existing.filter(o => !o.fulfilledAt).map(o => o.id);
+    const fulfilledAt = new Date();
+    if (toFlip.length) {
+        await prisma.order.updateMany({
+            where: { id: { in: toFlip } },
+            data: { fulfilledAt, fulfilledBy: userId || null }
+        });
+    }
+    return {
+        fulfilledAt: fulfilledAt.toISOString(),
+        count: toFlip.length,
+        skipped: uniqueIds.length - toFlip.length
+    };
+};
+
 // Delete Order (with all related records: payments, notifications, items, then order)
 exports.deleteOrder = async (id) => {
     const orderId = id;

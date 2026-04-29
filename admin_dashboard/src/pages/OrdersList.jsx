@@ -5,11 +5,17 @@ import { fetchProducts } from '../api/products';
 import { getSafeImageUrl, getProductDisplayImage } from '../utils/imageUtils';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { useApp } from '../context/useApp';
+import NextPushPanel from '../components/orders/NextPushPanel';
+import FulfilledBadge from '../components/orders/FulfilledBadge';
+import { OrderSelectHeader, OrderSelectCell } from '../components/orders/OrderSelectColumn';
+import BatchOrderActionBar from '../components/orders/BatchOrderActionBar';
 import { tx } from '../i18n/text';
 
 const OrdersList = ({ audience, title }) => {
     const { t } = useLanguage();
     const { isDark } = useTheme();
+    const { user } = useApp();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -26,6 +32,7 @@ const OrdersList = ({ audience, title }) => {
     const [itemSearch, setItemSearch] = useState('');
 
     const [statusFilter, setStatusFilter] = useState('');
+    const [selectedOrderIds, setSelectedOrderIds] = useState([]);
 
     useEffect(() => {
         loadOrders();
@@ -291,13 +298,29 @@ const OrdersList = ({ audience, title }) => {
                 </div>
             </div>
 
+            {/* Batch action bar (shows when one or more rows are selected) */}
+            <BatchOrderActionBar
+                selectedIds={selectedOrderIds}
+                onClear={() => setSelectedOrderIds([])}
+                orders={filteredOrders}
+                userRole={user?.role}
+                onAfterFulfill={() => loadOrders()}
+                onAfterPush={() => loadOrders()}
+            />
+
             {/* Orders Table */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div className="overflow-x-auto modern-scrollbar">
                     <table className="w-full text-left min-w-[900px]">
                         <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                             <tr>
-
+                                <th className="px-4 py-4 w-10">
+                                    <OrderSelectHeader
+                                        visibleIds={filteredOrders.map((o) => o.id)}
+                                        selectedIds={selectedOrderIds}
+                                        onChange={setSelectedOrderIds}
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Customer</th>
                                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Payment</th>
                                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date</th>
@@ -310,7 +333,13 @@ const OrdersList = ({ audience, title }) => {
                         <tbody className="divide-y divide-gray-100">
                             {filteredOrders.map((order) => (
                                 <tr key={order.id} className={`hover:${isDark ? 'bg-slate-800' : 'bg-gray-50'} transition-colors`}>
-
+                                    <td className="px-4 py-4 w-10">
+                                        <OrderSelectCell
+                                            orderId={order.id}
+                                            selectedIds={selectedOrderIds}
+                                            onToggle={setSelectedOrderIds}
+                                        />
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-gray-900">
                                             {t(order.user?.firstName)} {t(order.user?.lastName)}
@@ -330,9 +359,12 @@ const OrdersList = ({ audience, title }) => {
                                         {parseFloat(order.totalAmount).toFixed(2)} EGP
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                                            {order.status}
-                                        </span>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                                                {order.status}
+                                            </span>
+                                            <FulfilledBadge fulfilledAt={order.fulfilledAt} fulfilledBy={order.fulfilledBy} />
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
@@ -432,6 +464,7 @@ const OrdersList = ({ audience, title }) => {
                         </div>
 
                         <div className="p-4 md:p-6 overflow-y-auto flex-1 space-y-6 md:space-y-8 bg-gray-50/30">
+                            <NextPushPanel order={selectedOrder} userRole={user?.role} />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-100 shadow-sm relative group/card">
                                     <div className="flex justify-between items-center mb-4">
@@ -600,7 +633,21 @@ const OrdersList = ({ audience, title }) => {
                                             </div>
                                             <div className="flex-1 text-center sm:text-left">
                                                 <h4 className="font-bold text-gray-900 text-sm md:text-base">{item.product?.name || item.productName || 'Deleted Product'}</h4>
-                                                <p className="text-xs text-gray-500 italic">
+                                                {(item.color || item.size) && (
+                                                    <div className="mt-1 flex flex-wrap gap-1 justify-center sm:justify-start">
+                                                        {item.color && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">
+                                                                <span className="text-slate-500">Color:</span> {item.color}
+                                                            </span>
+                                                        )}
+                                                        {item.size && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">
+                                                                <span className="text-slate-500">Size:</span> {item.size}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <p className="text-xs text-gray-500 italic mt-1">
                                                     {parseFloat(item.priceAtPurchase).toFixed(2)} EGP
                                                 </p>
                                             </div>

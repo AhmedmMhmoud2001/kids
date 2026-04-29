@@ -6,8 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      // Point the dashboard at the local backend during dev.
+      // Change target to 'http://tovo-b.developteam.site/kids' to hit the remote API.
       '/api': {
-        target: 'http://tovo-b.developteam.site/kids',
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:5000',
         changeOrigin: true,
         secure: false
       }

@@ -6,11 +6,17 @@ import { fetchProducts } from '../api/products';
 import { getSafeImageUrl, getProductDisplayImage } from '../utils/imageUtils';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { useApp } from '../context/useApp';
+import NextPushPanel from '../components/orders/NextPushPanel';
+import FulfilledBadge from '../components/orders/FulfilledBadge';
+import { OrderSelectHeader, OrderSelectCell } from '../components/orders/OrderSelectColumn';
+import BatchOrderActionBar from '../components/orders/BatchOrderActionBar';
 import { tx } from '../i18n/text';
 
 const AllOrders = () => {
     const { t } = useLanguage();
     const { isDark } = useTheme();
+    const { user } = useApp();
     const [searchParams, setSearchParams] = useSearchParams();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,6 +35,7 @@ const AllOrders = () => {
     const [allProducts, setAllProducts] = useState([]);
     const [itemSearch, setItemSearch] = useState('');
     const [highlightedOrderId, setHighlightedOrderId] = useState(null);
+    const [selectedOrderIds, setSelectedOrderIds] = useState([]);
 
     const loadProducts = useCallback(async () => {
         try {
@@ -326,13 +333,29 @@ const AllOrders = () => {
                 </div>
             </div>
 
+            {/* Batch action bar (shows when one or more rows are selected) */}
+            <BatchOrderActionBar
+                selectedIds={selectedOrderIds}
+                onClear={() => setSelectedOrderIds([])}
+                orders={filteredOrders}
+                userRole={user?.role}
+                onAfterFulfill={() => loadOrders()}
+                onAfterPush={() => loadOrders()}
+            />
+
             {/* Orders Table */}
             <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100">
                 <div className="overflow-x-auto modern-scrollbar">
                     <table className="w-full text-left min-w-[900px]">
                         <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                             <tr>
-
+                                <th className="px-4 py-4 w-10">
+                                    <OrderSelectHeader
+                                        visibleIds={filteredOrders.map((o) => o.id)}
+                                        selectedIds={selectedOrderIds}
+                                        onChange={setSelectedOrderIds}
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Customer</th>
                                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Payment</th>
                                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date</th>
@@ -348,7 +371,13 @@ const AllOrders = () => {
                                     key={order.id}
                                     className={`hover:${isDark ? 'bg-slate-800' : 'bg-gray-50'} transition-colors ${highlightedOrderId === order.id ? (isDark ? 'bg-blue-900/30 ring-2 ring-blue-400' : 'bg-blue-50 ring-2 ring-blue-300 ring-inset') : ''}`}
                                 >
-
+                                    <td className="px-4 py-4 w-10">
+                                        <OrderSelectCell
+                                            orderId={order.id}
+                                            selectedIds={selectedOrderIds}
+                                            onToggle={setSelectedOrderIds}
+                                        />
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-gray-900">
                                             {t(order.user?.firstName)} {t(order.user?.lastName)}
@@ -368,18 +397,21 @@ const AllOrders = () => {
                                         {parseFloat(order.totalAmount).toFixed(2)} EGP
                                     </td>
                                     <td className="px-6 py-4">
-                                        <select
-                                            value={order.status}
-                                            onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                                            className={`px-3 py-1 text-xs font-semibold rounded-full border-none cursor-pointer outline-none ${getStatusColor(order.status)}`}
-                                        >
-                                            {getStatusOptionsForPaymentMethod(order.paymentMethod).map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                            {!getStatusOptionsForPaymentMethod(order.paymentMethod).some(o => o.value === order.status) && (
-                                                <option value={order.status}>{order.status}</option>
-                                            )}
-                                        </select>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <select
+                                                value={order.status}
+                                                onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                                                className={`px-3 py-1 text-xs font-semibold rounded-full border-none cursor-pointer outline-none ${getStatusColor(order.status)}`}
+                                            >
+                                                {getStatusOptionsForPaymentMethod(order.paymentMethod).map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                                {!getStatusOptionsForPaymentMethod(order.paymentMethod).some(o => o.value === order.status) && (
+                                                    <option value={order.status}>{order.status}</option>
+                                                )}
+                                            </select>
+                                            <FulfilledBadge fulfilledAt={order.fulfilledAt} fulfilledBy={order.fulfilledBy} />
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
@@ -499,6 +531,7 @@ const AllOrders = () => {
                             </div>
                         </div>
                         <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-gray-50/30">
+                            <NextPushPanel order={selectedOrder} userRole={user?.role} />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm relative">
                                     <div className="flex justify-between items-center mb-4">
@@ -657,7 +690,21 @@ const AllOrders = () => {
                                             </div>
                                             <div className="flex-1">
                                                 <p className="text-sm font-bold text-gray-900">{item.productName || item.product?.name}</p>
-                                                <p className="text-xs text-gray-500 font-medium">{parseFloat(item.priceAtPurchase).toFixed(2)} EGP</p>
+                                                {(item.color || item.size) && (
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {item.color && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">
+                                                                <span className="text-slate-500">Color:</span> {item.color}
+                                                            </span>
+                                                        )}
+                                                        {item.size && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">
+                                                                <span className="text-slate-500">Size:</span> {item.size}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <p className="text-xs text-gray-500 font-medium mt-1">{parseFloat(item.priceAtPurchase).toFixed(2)} EGP</p>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 {isEditing ? (

@@ -15,6 +15,7 @@ const ProductForm = ({ audience }) => {
     const navigate = useNavigate();
     const isEditMode = !!id;
 
+    const isNext = audience === 'NEXT';
     const [formData, setFormData] = useState({
         nameEn: '',
         nameAr: '',
@@ -25,12 +26,15 @@ const ProductForm = ({ audience }) => {
         sku: '',
         brandId: '',
         audience: audience,
-        variants: [], // { id?, colorName, sizeName, price, stock, lowStockThreshold?, sku }
+        variants: [], // { id?, colorName, sizeName, price, stock, lowStockThreshold?, sku, externalSku?, externalColor?, externalSize? }
         colorImages: [], // { colorId?, colorName, images: [url1..url8] } – up to 8 images per color
         isActive: true,
         isBestSeller: false,
         categoryId: '',
-        stock: ''
+        stock: '',
+        // next.co.uk source reference (NEXT audience only; powers the cart-push extension)
+        sourceUrl: '',
+        externalSku: ''
     });
 
     const [categories, setCategories] = useState([]);
@@ -147,6 +151,9 @@ const ProductForm = ({ audience }) => {
                     stock: v.stock ?? 0,
                     lowStockThreshold: v.lowStockThreshold != null ? v.lowStockThreshold : '',
                     sku: v.sku ?? '',
+                    externalSku: v.externalSku ?? '',
+                    externalColor: v.externalColor ?? '',
+                    externalSize: v.externalSize ?? '',
                 }));
                 const byColor = {};
                 (product.colorImages || []).forEach(ci => {
@@ -177,7 +184,9 @@ const ProductForm = ({ audience }) => {
                     isActive: product.isActive,
                     isBestSeller: product.isBestSeller ?? false,
                     categoryId: product.categoryId || '',
-                    stock: ''
+                    stock: '',
+                    sourceUrl: product.sourceUrl ?? '',
+                    externalSku: product.externalSku ?? ''
                 });
                 try {
                     const offersResponse = await fetchSettings();
@@ -215,7 +224,7 @@ const ProductForm = ({ audience }) => {
     const addVariant = () => {
         setFormData(prev => ({
             ...prev,
-            variants: [...prev.variants, { colorName: '', sizeName: '', price: '', stock: 0, lowStockThreshold: '', sku: '' }]
+            variants: [...prev.variants, { colorName: '', sizeName: '', price: '', stock: 0, lowStockThreshold: '', sku: '', externalSku: '', externalColor: '', externalSize: '' }]
         }));
     };
 
@@ -245,6 +254,9 @@ const ProductForm = ({ audience }) => {
             stock: v.stock ?? 0,
             lowStockThreshold: v.lowStockThreshold ?? '',
             sku: v.sku ?? '',
+            externalSku: v.externalSku ?? '',
+            externalColor: v.externalColor ?? '',
+            externalSize: v.externalSize ?? '',
         });
         setEditingVariantIndex(index);
     };
@@ -329,6 +341,9 @@ const ProductForm = ({ audience }) => {
             if (!formData.nameEn.trim() || !formData.nameAr.trim()) {
                 throw new Error('Product name is required in both English and Arabic');
             }
+            if (isNext && formData.sourceUrl && !/^https:\/\/www\.next\.co\.uk\//i.test(formData.sourceUrl.trim())) {
+                throw new Error('Next.co.uk URL must start with https://www.next.co.uk/');
+            }
             const baseSku = `PRD-${Date.now()}`;
             const variants = formData.variants
                 .filter(v => v.colorName?.trim() && v.sizeName?.trim())
@@ -336,7 +351,7 @@ const ProductForm = ({ audience }) => {
                     const skuRaw = (v.sku && String(v.sku).trim()) || '';
                     const sku = skuRaw || `${baseSku}-${index + 1}`;
                     const lowStockThreshold = (v.lowStockThreshold !== '' && v.lowStockThreshold != null) ? Math.max(0, parseInt(v.lowStockThreshold, 10)) : null;
-                    return {
+                    const out = {
                         id: v.id,
                         colorName: v.colorName.trim(),
                         sizeName: v.sizeName.trim(),
@@ -345,6 +360,15 @@ const ProductForm = ({ audience }) => {
                         lowStockThreshold,
                         sku
                     };
+                    // NEXT audience: pass through next.co.uk variant codes so the cart-push
+                    // extension has something to match against. Default external color/size
+                    // to the display labels when the admin hasn't overridden them.
+                    if (isNext) {
+                        out.externalSku = (v.externalSku || '').trim() || null;
+                        out.externalColor = (v.externalColor || '').trim() || v.colorName.trim() || null;
+                        out.externalSize = (v.externalSize || '').trim() || v.sizeName.trim() || null;
+                    }
+                    return out;
                 });
             const basePrice = variants.length > 0 && variants[0].price != null
                 ? variants[0].price
@@ -369,6 +393,10 @@ const ProductForm = ({ audience }) => {
                 variants,
                 colorImages
             };
+            if (isNext) {
+                submitData.sourceUrl = (formData.sourceUrl || '').trim() || null;
+                submitData.externalSku = (formData.externalSku || '').trim() || null;
+            }
 
             const saved = isEditMode
                 ? await updateProduct(id, submitData)
@@ -516,6 +544,39 @@ const ProductForm = ({ audience }) => {
                                 placeholder="e.g. PRD-001"
                             />
                         </div>
+
+                        {isNext && (
+                            <div className="md:col-span-2 rounded-lg border border-indigo-200 bg-indigo-50/40 p-4 space-y-3">
+                                <div className="text-sm font-semibold text-indigo-900">next.co.uk source (used by the cart-push extension)</div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Next.co.uk URL</label>
+                                        <input
+                                            type="url"
+                                            name="sourceUrl"
+                                            value={formData.sourceUrl}
+                                            onChange={handleChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                            placeholder="https://www.next.co.uk/style/..."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Next.co.uk style code</label>
+                                        <input
+                                            type="text"
+                                            name="externalSku"
+                                            value={formData.externalSku}
+                                            onChange={handleChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                            placeholder="Y97-922"
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-gray-500">
+                                    Usually filled in automatically by Excel import. Paste manually only when a product is missing its source link.
+                                </p>
+                            </div>
+                        )}
 
                         {formData.variants.length === 0 && (
                             <div>
@@ -696,6 +757,44 @@ const ProductForm = ({ audience }) => {
                                             placeholder="KID-RED-M"
                                         />
                                     </div>
+                                    {isNext && (
+                                        <div className="rounded-md border border-indigo-200 bg-indigo-50/40 p-3 space-y-2">
+                                            <div className="text-xs font-semibold text-indigo-900">next.co.uk variant codes (optional)</div>
+                                            <div>
+                                                <label className="block text-xs text-gray-700 mb-1">External color (exact label on next.co.uk)</label>
+                                                <input
+                                                    type="text"
+                                                    value={editVariantForm.externalColor || ''}
+                                                    onChange={(e) => setEditVariantForm(prev => ({ ...prev, externalColor: e.target.value }))}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                                                    placeholder="Royal Blue"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-700 mb-1">External size (exact label on next.co.uk)</label>
+                                                <input
+                                                    type="text"
+                                                    value={editVariantForm.externalSize || ''}
+                                                    onChange={(e) => setEditVariantForm(prev => ({ ...prev, externalSize: e.target.value }))}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                                                    placeholder="M"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-700 mb-1">External variant SKU</label>
+                                                <input
+                                                    type="text"
+                                                    value={editVariantForm.externalSku || ''}
+                                                    onChange={(e) => setEditVariantForm(prev => ({ ...prev, externalSku: e.target.value }))}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                                                    placeholder="Y97-922-BLUE-M"
+                                                />
+                                            </div>
+                                            <p className="text-[11px] text-gray-500">
+                                                Leave blank to fall back to the variant's color/size above.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex gap-2 mt-6">
                                     <button type="button" onClick={saveEditVariant} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">

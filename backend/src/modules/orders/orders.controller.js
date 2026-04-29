@@ -243,6 +243,19 @@ exports.updateOrderItems = async (req, res) => {
     }
 };
 
+// Mark Orders Fulfilled (Admins) — batch-aware, idempotent
+exports.markOrdersFulfilled = async (req, res) => {
+    try {
+        const { orderIds } = req.body || {};
+        const userId = req.user?.id || null;
+        const data = await orderService.markFulfilled(orderIds, userId);
+        res.json({ success: true, data });
+    } catch (error) {
+        const status = error.statusCode || 400;
+        res.status(status).json({ success: false, message: error.message });
+    }
+};
+
 // Delete Order (Admins only)
 exports.deleteOrder = async (req, res) => {
     try {

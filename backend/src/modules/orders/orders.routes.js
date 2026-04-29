@@ -1,8 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const ordersController = require('./orders.controller');
+const nextPushRoutes = require('./next-push/next-push.routes');
 const { authenticate } = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/role.middleware');
+
+// next.co.uk cart-push routes (mounted first so /next-push/* doesn't clash with /:id/status etc)
+router.use('/', nextPushRoutes);
+
+// Batch mark orders as fulfilled (literal path so it doesn't shadow /:id/...)
+router.post('/fulfill-batch',
+    authenticate,
+    authorize(['SYSTEM_ADMIN', 'ADMIN_KIDS', 'ADMIN_NEXT']),
+    ordersController.markOrdersFulfilled
+);
 
 // Create Order (Customer)
 router.post('/', authenticate, ordersController.createOrder);
