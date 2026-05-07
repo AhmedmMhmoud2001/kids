@@ -100,9 +100,24 @@ const verifyCsrfToken = (sessionId, token) => {
  * CSRF Protection Middleware
  */
 const csrfProtection = (req, res, next) => {
-    // Skip for safe methods
+    // Safe methods never need CSRF
     const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
     if (safeMethods.includes(req.method)) {
+        return next();
+    }
+
+    // Nuclear option: cross-origin SPAs often cannot persist session_id cookie → CSRF always fails.
+    // Enable only if you accept reduced CSRF defense (prefer Bearer auth on all state-changing calls).
+    if (process.env.DISABLE_CSRF === 'true' || process.env.DISABLE_CSRF === '1') {
+        return next();
+    }
+
+    // JWT in header: not vulnerable to classic cross-site cookie CSRF the same way.
+    const authHeader = req.headers.authorization;
+    const xAuth = req.headers['x-auth-token'];
+    const hasBearer = typeof authHeader === 'string' && /^Bearer\s+\S{8,}/i.test(authHeader.trim());
+    const hasXAuth = typeof xAuth === 'string' && xAuth.trim().length >= 8;
+    if (hasBearer || hasXAuth) {
         return next();
     }
     
@@ -120,7 +135,8 @@ const csrfProtection = (req, res, next) => {
         '/api/auth/google',
         '/api/auth/google/callback',
         '/api/auth/facebook',
-        '/api/auth/facebook/callback'
+        '/api/auth/facebook/callback',
+        '/api/contact'
     ];
     
     // Normalize path so /kids/api/... is treated like /api/... for skip list
