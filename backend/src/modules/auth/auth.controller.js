@@ -13,12 +13,8 @@ exports.login = async (req, res) => {
         const result = await authService.login(email, password, ipAddress);
         
         // Set httpOnly cookies for tokens
-        if (result.token) {
-            setAuthCookie(res, result.token);
-        }
-        if (result.refreshToken) {
-            setRefreshCookie(res, result.refreshToken);
-        }
+        if (result.token) setAuthCookie(res, result.token);
+        if (result.refreshToken) setRefreshCookie(res, result.refreshToken);
         
         // Initialize CSRF session
         const { csrfToken } = initializeSession(res);
@@ -30,11 +26,12 @@ exports.login = async (req, res) => {
             csrfToken, // Send CSRF token to client
             expiresIn: '15m' // Tell client when to refresh
         };
-        if (process.env.NODE_ENV !== 'production') {
-            responseData.token = result.token || null; // development/testing only
+        // If you need SPA dashboards to use Bearer auth (e.g. when cross-site cookies are blocked),
+        // enable this flag to include token in the JSON response.
+        const exposeToken = process.env.EXPOSE_TOKEN_IN_RESPONSE === 'true';
+        if (process.env.NODE_ENV !== 'production' || exposeToken) {
+            responseData.token = result.token || null;
         }
-        setAuthCookie(res, result.token);
-        setRefreshCookie(res, result.refreshToken);
         
         res.json({
             success: true,
@@ -138,8 +135,9 @@ exports.verifyEmail = async (req, res) => {
             csrfToken,
             expiresIn: '15m'
         };
-        if (process.env.NODE_ENV !== 'production') {
-            responseDataEmail.token = result.token || null; // development/testing only
+        const exposeToken = process.env.EXPOSE_TOKEN_IN_RESPONSE === 'true';
+        if (process.env.NODE_ENV !== 'production' || exposeToken) {
+            responseDataEmail.token = result.token || null;
         }
         res.json({
             success: true,
