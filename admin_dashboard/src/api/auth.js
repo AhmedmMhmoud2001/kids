@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './config';
-import { setCsrfToken, clearCsrfToken, startTokenRefresh, stopTokenRefresh } from './apiClient';
+import { apiRequest, setCsrfToken, clearCsrfToken, startTokenRefresh, stopTokenRefresh } from './apiClient';
 
 /**
  * Login user
@@ -42,16 +42,14 @@ export const loginUser = async (email, password) => {
  */
 export const logoutUser = async () => {
     try {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        });
+        await apiRequest('/auth/logout', { method: 'POST' });
     } catch (error) {
         console.error('Logout error:', error);
     }
 
     // Clear local state
     localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
     clearCsrfToken();
     stopTokenRefresh();
 };
@@ -60,13 +58,9 @@ export const logoutUser = async () => {
  * Register user
  */
 export const registerUser = async (userData) => {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await apiRequest('/auth/register', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-        credentials: 'include'
+        body: JSON.stringify(userData)
     });
 
     const data = await response.json();
@@ -80,9 +74,8 @@ export const registerUser = async (userData) => {
  * Get current user
  */
 export const fetchMe = async () => {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        credentials: 'include'
-    });
+    // Use apiRequest so Bearer token (localStorage) can be sent if cookies aren't available
+    const response = await apiRequest('/auth/me', { method: 'GET' });
 
     const data = await response.json();
     if (!response.ok) {
@@ -102,13 +95,9 @@ export const fetchMe = async () => {
  * Update user profile
  */
 export const updateProfile = async (userData) => {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    const response = await apiRequest('/auth/me', {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData),
-        credentials: 'include'
+        body: JSON.stringify(userData)
     });
 
     const data = await response.json();
