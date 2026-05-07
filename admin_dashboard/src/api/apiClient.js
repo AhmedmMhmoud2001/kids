@@ -145,9 +145,11 @@ export const apiRequest = async (endpoint, options = {}) => {
     // Add CSRF token for state-changing requests
     const methodsNeedingCsrf = ['POST', 'PUT', 'PATCH', 'DELETE'];
     if (methodsNeedingCsrf.includes(options.method?.toUpperCase())) {
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
+        // Ensure we have a CSRF token (required by backend in production for non-auth routes)
+        if (!csrfToken) {
+            await getCsrfToken();
         }
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
     }
 
     // Prefer cookie-based token if available, fallback to localStorage token if present
