@@ -25,6 +25,11 @@ export const loginUser = async (email, password) => {
         setCsrfToken(data.data.csrfToken);
     }
 
+    // Persist token in localStorage for Authorization header fallback
+    if (data.data?.token) {
+        localStorage.setItem('auth_token', data.data.token);
+    }
+
     // Start automatic token refresh
     startTokenRefresh();
 

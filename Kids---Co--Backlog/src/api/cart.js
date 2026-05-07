@@ -1,11 +1,10 @@
 import { API_BASE_URL } from './config';
+import { apiRequest } from './apiClient';
 
-// All requests use credentials: 'include' for httpOnly cookies
+// Requests go through apiRequest to attach auth headers (Bearer) + cookies.
 
 export const fetchCart = async () => {
-    const response = await fetch(`${API_BASE_URL}/cart`, {
-        credentials: 'include'
-    });
+    const response = await apiRequest('/cart', { method: 'GET' });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to fetch cart');
     return data;
@@ -15,11 +14,9 @@ export const addToCart = async (productId, quantity, selectedSize = null, select
     const body = productVariantId
         ? { productVariantId: productVariantId, quantity: parseInt(quantity) }
         : { productId: productId, quantity: parseInt(quantity), selectedSize: selectedSize || undefined, selectedColor: selectedColor || undefined };
-    const response = await fetch(`${API_BASE_URL}/cart/add`, {
+    const response = await apiRequest('/cart/add', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to add to cart');
@@ -27,11 +24,9 @@ export const addToCart = async (productId, quantity, selectedSize = null, select
 };
 
 export const updateCartItem = async (itemId, quantity) => {
-    const response = await fetch(`${API_BASE_URL}/cart/update/${itemId}`, {
+    const response = await apiRequest(`/cart/update/${itemId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ quantity: parseInt(quantity) })
+        body: JSON.stringify({ quantity: parseInt(quantity) }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to update cart item');
@@ -39,10 +34,7 @@ export const updateCartItem = async (itemId, quantity) => {
 };
 
 export const removeCartItem = async (itemId) => {
-    const response = await fetch(`${API_BASE_URL}/cart/remove/${itemId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-    });
+    const response = await apiRequest(`/cart/remove/${itemId}`, { method: 'DELETE' });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to remove cart item');
     return data;

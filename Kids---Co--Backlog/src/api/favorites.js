@@ -1,21 +1,18 @@
 import { API_BASE_URL } from './config';
+import { apiRequest } from './apiClient';
 
-// All requests use credentials: 'include' for httpOnly cookies
+// Requests go through apiRequest to attach auth headers (Bearer) + cookies.
 
 export const fetchFavorites = async () => {
-    const response = await fetch(`${API_BASE_URL}/favorites`, {
-        credentials: 'include'
-    });
+    const response = await apiRequest('/favorites', { method: 'GET' });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to fetch favorites');
     return data;
 };
 
 export const addToFavorites = async (productId) => {
-    const response = await fetch(`${API_BASE_URL}/favorites/add`, {
+    const response = await apiRequest('/favorites/add', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ productId })
     });
     const data = await response.json();
@@ -24,10 +21,7 @@ export const addToFavorites = async (productId) => {
 };
 
 export const removeFromFavorites = async (productId) => {
-    const response = await fetch(`${API_BASE_URL}/favorites/remove/${productId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-    });
+    const response = await apiRequest(`/favorites/remove/${productId}`, { method: 'DELETE' });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to remove favorite');
     return data;

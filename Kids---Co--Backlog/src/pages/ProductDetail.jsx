@@ -159,6 +159,7 @@ const ProductDetail = () => {
   }, [images, effectiveThumbStart]);
 
   const selectedVariant = useMemo(() => {
+    // Display helper variant (price/sku). This can fallback.
     if (!product?.variants || !displayColors.length || !displaySizes.length) return null;
     const colorName = displayColors[safeSelectedColor];
     const sizeName = displaySizes[safeSelectedSize];
@@ -174,16 +175,34 @@ const ProductDetail = () => {
     return product.variants.find(match) || product.variants.find(matchColorOnly) || product.variants[0];
   }, [product, displayColors, displaySizes, safeSelectedColor, safeSelectedSize]);
 
+  const exactSelectedVariant = useMemo(() => {
+    // This is the only variant we are allowed to add to cart.
+    if (!product?.variants || !displayColors.length || !displaySizes.length) return null;
+    const colorName = displayColors[safeSelectedColor];
+    const sizeName = displaySizes[safeSelectedSize];
+    if (!colorName || !sizeName) return null;
+    const colorLower = (colorName ?? '').toString().toLowerCase().trim();
+    const sizeLower = (sizeName ?? '').toString().toLowerCase().trim();
+    const matchExact = (v) => {
+      const vc = (v.color?.name ?? '').toString().toLowerCase().trim();
+      const vs = (v.size?.name ?? '').toString().toLowerCase().trim();
+      return vc === colorLower && vs === sizeLower;
+    };
+    return product.variants.find(matchExact) || null;
+  }, [product, displayColors, displaySizes, safeSelectedColor, safeSelectedSize]);
+
   // Stock status computed per variant (not stored in DB): In Stock (qty > threshold), Low Stock (0 < qty <= threshold), Out of Stock (qty === 0)
   const stockStatus = useMemo(() => {
-    if (!selectedVariant) return 'in_stock';
-    const stock = selectedVariant.stock ?? 0;
+    // Use exact variant for stock gating to avoid adding a different fallback variant.
+    const v = exactSelectedVariant;
+    if (!v) return 'out_of_stock';
+    const stock = v.stock ?? 0;
     if (stock === 0) return 'out_of_stock';
-    const threshold = selectedVariant.lowStockThreshold ?? DEFAULT_LOW_STOCK;
+    const threshold = v.lowStockThreshold ?? DEFAULT_LOW_STOCK;
     return stock <= threshold ? 'low_stock' : 'in_stock';
-  }, [selectedVariant]);
+  }, [exactSelectedVariant]);
 
-  const maxStock = selectedVariant != null ? (selectedVariant.stock ?? 0) : 999;
+  const maxStock = exactSelectedVariant != null ? (exactSelectedVariant.stock ?? 0) : 0;
   const discountPercent = useProductOfferDiscount(product);
 
   if (isLoading) {
@@ -226,7 +245,7 @@ const ProductDetail = () => {
     const color = displayColors?.[safeSelectedColor];
     const imageForColor = images.length > 0 ? images[0] : product.image;
     const productWithVariantPrice = { ...product, price: finalDisplayPrice, image: imageForColor };
-    addToCart(productWithVariantPrice, clampedQuantity, size, color, selectedVariant?.id);
+    addToCart(productWithVariantPrice, clampedQuantity, size, color, exactSelectedVariant?.id);
     setIsCartOpen(true);
   };
 

@@ -11,6 +11,17 @@ let csrfToken = null;
 let refreshPromise = null;
 let refreshTimer = null;
 
+// Helper to read a named cookie (simple parser)
+const readCookie = (name) => {
+  if (typeof document === 'undefined') return null;
+  const nameEq = `${name}=`;
+  const cookies = document.cookie.split(';').map(c => c.trim());
+  for (const c of cookies) {
+    if (c.startsWith(nameEq)) return c.substring(nameEq.length);
+  }
+  return null;
+};
+
 /**
  * Get CSRF token from server
  */
@@ -137,6 +148,22 @@ export const apiRequest = async (endpoint, options = {}) => {
         if (csrfToken) {
             headers['X-CSRF-Token'] = csrfToken;
         }
+    }
+
+    // Prefer cookie-based token if available, fallback to localStorage token if present
+    try {
+        if (!headers['Authorization']) {
+            const cookieToken = readCookie('auth_token');
+            const storageToken = (typeof window !== 'undefined')
+                ? (localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token'))
+                : null;
+            const token = cookieToken || storageToken;
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+        }
+    } catch {
+        // ignore if storage/cookies are not available
     }
     
     let response = await fetch(url, {

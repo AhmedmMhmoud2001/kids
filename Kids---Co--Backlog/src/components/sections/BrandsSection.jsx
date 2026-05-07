@@ -35,7 +35,7 @@ const BrandsSection = () => {
     <Section padding="py-4 sm:py-5 lg:py-6" className="border-b">
       <Swiper
         key={language}
-        rtl={language === 'ar'}
+        dir={language === 'ar' ? 'rtl' : 'ltr'}
         modules={[Autoplay]}
         loop={true} // Only loop if enough items
         centeredSlides={false}
