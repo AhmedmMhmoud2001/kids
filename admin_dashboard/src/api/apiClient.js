@@ -266,6 +266,49 @@ export const del = async (endpoint) => {
 };
 
 /**
+ * GET endpoint as Blob (templates/exports). GET does not require CSRF; still send auth fallback.
+ */
+export const getBlob = async (endpoint) => {
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const headers = {};
+    try {
+        const cookieToken = readCookie('auth_token');
+        const storageToken = (typeof window !== 'undefined')
+            ? (localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token'))
+            : null;
+        const token = cookieToken || storageToken;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+    } catch {
+        // ignore
+    }
+
+    const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        credentials: 'include'
+    });
+
+    if (!response.ok) {
+        let msg = `Request failed (${response.status})`;
+        try {
+            const j = await response.json();
+            if (j.message) msg = j.message;
+        } catch {
+            try {
+                const t = await response.text();
+                if (t && t.length < 200) msg = t;
+            } catch {
+                // ignore
+            }
+        }
+        throw new Error(msg);
+    }
+    return response.blob();
+};
+
+/**
  * Upload file with credentials (multipart). Do not set Content-Type (browser sets boundary).
  */
 export const uploadFile = async (endpoint, formData) => {
@@ -312,6 +355,7 @@ export default {
     patch,
     del,
     uploadFile,
+    getBlob,
     apiRequest,
     getCsrfToken,
     setCsrfToken,

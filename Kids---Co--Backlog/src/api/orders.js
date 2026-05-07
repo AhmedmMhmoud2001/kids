@@ -1,68 +1,52 @@
-import { API_BASE_URL } from './config';
+import { apiRequest } from './apiClient';
 
-// All requests use credentials: 'include' for httpOnly cookies
+// Requests go through apiRequest to attach CSRF + auth headers + cookies.
 
 export const createOrder = async (orderData) => {
-    const response = await fetch(`${API_BASE_URL}/orders`, {
+    const response = await apiRequest('/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(orderData)
     });
-    return response.json();
+    return await response.json();
 };
 
 export const fetchMyOrders = async () => {
-    const response = await fetch(`${API_BASE_URL}/orders`, {
-        credentials: 'include'
-    });
-    return response.json();
+    const response = await apiRequest('/orders', { method: 'GET' });
+    return await response.json();
 };
 
 export const fetchOrderById = async (id) => {
-    const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
-        credentials: 'include'
-    });
-    return response.json();
+    const response = await apiRequest(`/orders/${id}`, { method: 'GET' });
+    return await response.json();
 };
 
 export const updateOrderDetails = async (id, data) => {
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/details`, {
+    const response = await apiRequest(`/orders/${id}/details`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(data)
     });
-    return response.json();
+    return await response.json();
 };
 
 export const updateOrderItems = async (id, items) => {
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/items`, {
+    const response = await apiRequest(`/orders/${id}/items`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ items })
     });
-    return response.json();
+    return await response.json();
 };
 
 /** Cancel order (customer only, PENDING orders). */
 export const cancelOrder = async (id) => {
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/cancel`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-    });
-    return response.json();
+    const response = await apiRequest(`/orders/${id}/cancel`, { method: 'PATCH' });
+    return await response.json();
 };
 
 /** Request return (customer only, DELIVERED orders, at least 24h after delivery). */
 export const requestReturn = async (id, returnReason = null) => {
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/request-return`, {
+    const response = await apiRequest(`/orders/${id}/request-return`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ returnReason: returnReason || null })
     });
-    return response.json();
+    return await response.json();
 };
