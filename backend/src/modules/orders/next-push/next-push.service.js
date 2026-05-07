@@ -29,7 +29,10 @@ exports.startPush = async (orderId, userId) => {
         throw AppError.badRequest('This order has no NEXT items to push.');
     }
 
-    const missingUrl = nextItems.find(it => !it.product?.sourceUrl);
+    // Each colourway is its own next.co.uk page, so prefer the variant's own
+    // sourceUrl and fall back to the product's only when the variant doesn't
+    // carry one (e.g. older imports made before per-variant URLs were saved).
+    const missingUrl = nextItems.find(it => !(it.productVariant?.sourceUrl || it.product?.sourceUrl));
     if (missingUrl) {
         throw AppError.badRequest(
             `Product "${missingUrl.product?.name || missingUrl.productName || missingUrl.productId}" is missing a next.co.uk source URL. Open the product and paste its URL before pushing.`
@@ -56,7 +59,7 @@ exports.startPush = async (orderId, userId) => {
     // Build the payload the extension expects (Spec 2 from the plan).
     const items = nextItems.map(it => ({
         orderItemId: it.id,
-        sourceUrl: it.product.sourceUrl,
+        sourceUrl: it.productVariant?.sourceUrl || it.product.sourceUrl,
         externalColor: it.productVariant?.externalColor || it.color || null,
         externalSize: it.productVariant?.externalSize || it.size || null,
         quantity: it.quantity
@@ -135,7 +138,10 @@ exports.startBatchPush = async (orderIds, userId) => {
         if (nextItems.length === 0) {
             throw AppError.badRequest(`Order ${order.id} has no NEXT items to push.`);
         }
-        const missingUrl = nextItems.find(it => !it.product?.sourceUrl);
+        // Each colourway is its own next.co.uk page, so prefer the variant's own
+    // sourceUrl and fall back to the product's only when the variant doesn't
+    // carry one (e.g. older imports made before per-variant URLs were saved).
+    const missingUrl = nextItems.find(it => !(it.productVariant?.sourceUrl || it.product?.sourceUrl));
         if (missingUrl) {
             throw AppError.badRequest(
                 `Order ${order.id}: product "${missingUrl.product?.name || missingUrl.productName || missingUrl.productId}" is missing a next.co.uk source URL. Open the product and paste its URL before pushing.`
@@ -167,7 +173,7 @@ exports.startBatchPush = async (orderIds, userId) => {
     const items = flatItems.map(({ orderId, item }) => ({
         orderId,
         orderItemId: item.id,
-        sourceUrl: item.product.sourceUrl,
+        sourceUrl: item.productVariant?.sourceUrl || item.product.sourceUrl,
         externalColor: item.productVariant?.externalColor || item.color || null,
         externalSize: item.productVariant?.externalSize || item.size || null,
         quantity: item.quantity

@@ -26,7 +26,9 @@ export default function NextPushPanel({ order, userRole, onAfterFulfill }) {
         () => (order?.items || []).filter(it => it?.product?.audience === 'NEXT'),
         [order]
     );
-    const missingSourceUrl = nextItems.filter(it => !it?.product?.sourceUrl);
+    // Each next.co.uk colourway is its own URL — prefer the variant's URL and
+    // fall back to the product's only when the variant doesn't carry one.
+    const missingSourceUrl = nextItems.filter(it => !(it?.productVariant?.sourceUrl || it?.product?.sourceUrl));
     const hasNextItems = nextItems.length > 0;
     const canPush = hasNextItems && missingSourceUrl.length === 0;
 

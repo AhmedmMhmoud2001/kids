@@ -926,6 +926,10 @@ exports.importFromExcel = async (buffer, audience) => {
             ? externalSizeInput
             : (variant?.externalSize ?? (audience === 'NEXT' ? sizeName : null));
 
+        // Per-colour next.co.uk URL — each colourway is its own page, so the
+        // variant carries its own URL rather than inheriting the product's.
+        const newVariantSourceUrl = sourceUrlInput !== '' ? sourceUrlInput : (variant?.sourceUrl ?? null);
+
         if (variant) {
             const same =
                 Math.abs(variant.price - price) < 0.01 &&
@@ -935,7 +939,8 @@ exports.importFromExcel = async (buffer, audience) => {
                 variant.available === available &&
                 (variant.externalSku ?? null) === (newExternalVariantSku ?? null) &&
                 (variant.externalColor ?? null) === (newExternalColor ?? null) &&
-                (variant.externalSize ?? null) === (newExternalSize ?? null);
+                (variant.externalSize ?? null) === (newExternalSize ?? null) &&
+                (variant.sourceUrl ?? null) === (newVariantSourceUrl ?? null);
 
             // Force update if the product changed
             const forceUpdate = updatedProductIds.has(productId);
@@ -950,7 +955,8 @@ exports.importFromExcel = async (buffer, audience) => {
                             price, stock, lowStockThreshold, sku, available,
                             externalSku: newExternalVariantSku,
                             externalColor: newExternalColor,
-                            externalSize: newExternalSize
+                            externalSize: newExternalSize,
+                            sourceUrl: newVariantSourceUrl
                         }
                     });
                     updated.variants.push({ id: variant.id, sku });
@@ -973,7 +979,8 @@ exports.importFromExcel = async (buffer, audience) => {
                         available,
                         externalSku: newExternalVariantSku,
                         externalColor: newExternalColor,
-                        externalSize: newExternalSize
+                        externalSize: newExternalSize,
+                        sourceUrl: newVariantSourceUrl
                     }
                 });
                 created.variants.push({ id: newVariant.id, sku });

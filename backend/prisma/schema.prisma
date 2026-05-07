@@ -194,6 +194,10 @@ model ProductVariant {
   externalSku   String? @db.VarChar(100)
   externalColor String? @db.VarChar(100)
   externalSize  String? @db.VarChar(50)
+  // Per-colour next.co.uk URL. Each colourway is its own page, so storing one
+  // URL on the parent Product would land every variant on the first colour.
+  // The extension reads this and falls back to product.sourceUrl when null.
+  sourceUrl     String? @db.VarChar(500)
 
   productId String
   colorId   String

@@ -303,7 +303,15 @@ exports.findOne = async (id, itemWhere = {}) => {
     const variants = variantIds.length
         ? await prisma.productVariant.findMany({
             where: { id: { in: variantIds } },
-            select: { id: true, stock: true }
+            // sourceUrl/externalColor/externalSize feed the NextPushPanel
+            // disabled-state check and the per-item URL preview.
+            select: {
+                id: true,
+                stock: true,
+                sourceUrl: true,
+                externalColor: true,
+                externalSize: true,
+            }
         })
         : [];
     const variantMap = new Map(variants.map(v => [v.id, v]));
