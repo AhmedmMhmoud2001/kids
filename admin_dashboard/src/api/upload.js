@@ -1,6 +1,4 @@
-import { API_BASE_URL } from './config';
-
-// All requests use credentials: 'include' for httpOnly cookies
+import { uploadFile } from './apiClient';
 
 /**
  * Upload general image
@@ -8,15 +6,7 @@ import { API_BASE_URL } from './config';
 export const uploadImage = async (file) => {
     const formData = new FormData();
     formData.append('image', file);
-
-    const response = await fetch(`${API_BASE_URL}/upload`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to upload image');
+    const data = await uploadFile('/upload', formData);
     return data.data;
 };
 
@@ -26,15 +16,7 @@ export const uploadImage = async (file) => {
 export const uploadUserImage = async (file) => {
     const formData = new FormData();
     formData.append('image', file);
-
-    const response = await fetch(`${API_BASE_URL}/upload/user-image`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to upload user image');
+    const data = await uploadFile('/upload/user-image', formData);
     return data.data;
 };
 
@@ -44,15 +26,7 @@ export const uploadUserImage = async (file) => {
 export const uploadCategoryImage = async (file) => {
     const formData = new FormData();
     formData.append('image', file);
-
-    const response = await fetch(`${API_BASE_URL}/upload/category`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to upload category image');
+    const data = await uploadFile('/upload/category', formData);
     return data.data;
 };
 
@@ -62,15 +36,7 @@ export const uploadCategoryImage = async (file) => {
 export const uploadBrandImage = async (file) => {
     const formData = new FormData();
     formData.append('image', file);
-
-    const response = await fetch(`${API_BASE_URL}/upload/brand`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to upload brand image');
+    const data = await uploadFile('/upload/brand', formData);
     return data.data;
 };
 
@@ -79,17 +45,8 @@ export const uploadBrandImage = async (file) => {
  */
 export const uploadProductImage = async (file) => {
     const formData = new FormData();
-    formData.append('images', file); // Backend expects 'images' (array) even for single in product route
-
-    const response = await fetch(`${API_BASE_URL}/upload/product`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to upload product image');
-    // Product route returns { files: [...] }
+    formData.append('images', file);
+    const data = await uploadFile('/upload/product', formData);
     return data.data.files[0];
 };
 
@@ -100,20 +57,13 @@ export const uploadProductImages = async (files) => {
     const formData = new FormData();
 
     if (Array.isArray(files)) {
-        files.forEach(file => formData.append('images', file));
+        files.forEach((file) => formData.append('images', file));
     } else if (files instanceof FileList) {
-        Array.from(files).forEach(file => formData.append('images', file));
+        Array.from(files).forEach((file) => formData.append('images', file));
     } else {
         formData.append('images', files);
     }
 
-    const response = await fetch(`${API_BASE_URL}/upload/product`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to upload product images');
+    const data = await uploadFile('/upload/product', formData);
     return data.data;
 };

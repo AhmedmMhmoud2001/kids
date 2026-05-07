@@ -266,24 +266,43 @@ export const del = async (endpoint) => {
 };
 
 /**
- * Upload file with credentials
+ * Upload file with credentials (multipart). Do not set Content-Type (browser sets boundary).
  */
 export const uploadFile = async (endpoint, formData) => {
+    if (!csrfToken) {
+        await getCsrfToken();
+    }
+
     const headers = {};
-    
-    // Add CSRF token
     if (csrfToken) {
         headers['X-CSRF-Token'] = csrfToken;
     }
-    
+
+    try {
+        const cookieToken = readCookie('auth_token');
+        const storageToken = (typeof window !== 'undefined')
+            ? (localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token'))
+            : null;
+        const token = cookieToken || storageToken;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+    } catch {
+        // ignore
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         body: formData,
         headers,
         credentials: 'include'
     });
-    
-    return response.json();
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.message || `Upload failed (${response.status})`);
+    }
+    return data;
 };
 
 export default {
