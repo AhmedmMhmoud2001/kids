@@ -90,10 +90,11 @@ export const refreshAccessToken = async () => {
             return data;
         } catch (error) {
             console.error('Token refresh failed:', error);
-            // Clear state and redirect to login
+            // Clear state and notify app (don't hard redirect here)
             clearCsrfToken();
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            localStorage.removeItem('auth_token');
+            window.dispatchEvent(new CustomEvent('auth:expired'));
             throw error;
         } finally {
             refreshPromise = null;
@@ -174,30 +175,40 @@ export const apiRequest = async (endpoint, options = {}) => {
         credentials: 'include' // Important: include cookies in requests
     });
     
-    // Handle 401 Unauthorized - try to refresh token
+    // Handle 401 Unauthorized - try refresh and retry
     if (response.status === 401) {
-        const data = await response.json();
-        
-        if (data.code === 'TOKEN_EXPIRED') {
+        let data = {};
+        try {
+            data = await response.json();
+        } catch {
+            data = {};
+        }
+
+        const shouldRetry =
+            data.code === 'TOKEN_EXPIRED' ||
+            data.code === 'AUTH_TOKEN_MISSING' ||
+            (typeof data.message === 'string' && data.message.toLowerCase().includes('token'));
+
+        if (shouldRetry) {
             try {
-                // Try to refresh the token
                 await refreshAccessToken();
-                
-                // Retry the original request
                 response = await fetch(url, {
                     ...options,
                     headers,
                     credentials: 'include'
                 });
-            } catch (refreshError) {
-                // Refresh failed, redirect to login
+            } catch {
+                clearCsrfToken();
+                localStorage.removeItem('user');
+                localStorage.removeItem('auth_token');
+                window.dispatchEvent(new CustomEvent('auth:expired'));
                 throw new Error('Session expired. Please log in again.');
             }
         } else {
-            // Other auth errors
             clearCsrfToken();
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            localStorage.removeItem('auth_token');
+            window.dispatchEvent(new CustomEvent('auth:expired'));
             throw new Error(data.message || 'Unauthorized');
         }
     }

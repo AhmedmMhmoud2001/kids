@@ -47,6 +47,23 @@ export const AppProvider = ({ children }) => {
         verifySession();
     }, []);
 
+    // Listen for auth expiration events (token refresh failures, 401 handling)
+    useEffect(() => {
+        const handleAuthExpired = () => {
+            setUser(null);
+            stopTokenRefresh();
+            try {
+                localStorage.removeItem('user');
+                localStorage.removeItem('auth_token');
+            } catch {
+                // ignore
+            }
+        };
+
+        window.addEventListener('auth:expired', handleAuthExpired);
+        return () => window.removeEventListener('auth:expired', handleAuthExpired);
+    }, []);
+
     // Socket Connection
     useEffect(() => {
         if (user && !isLoading) {
