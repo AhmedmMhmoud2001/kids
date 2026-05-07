@@ -1,48 +1,64 @@
 /**
- * API Configuration
- * Production: https://tovo-b.developteam.site/kids
- * لو الموقع شغال على Vercel أو أي دومين، يتصل بالسيرفر تلقائي (مش localhost).
+ * API configuration — no .env / import.meta.env required.
+ * Deployed SPA (e.g. Vercel): calls PUBLIC_BACKEND_ORIGIN.
+ * Local dev (Vite): uses same-origin `/api` (see vite proxy).
  */
 
-const PRODUCTION_API = 'https://kids.nodeteam.site/api';
-const PRODUCTION_HOST = 'https://kids.nodeteam.site';
-const LOCAL_API = 'http://localhost:5000/api';
-const LOCAL_HOST = 'http://localhost:5000';
+/** Production API host (HTTPS, no trailing slash). Change here if backend moves. */
+export const PUBLIC_BACKEND_ORIGIN = 'https://kids.nodeteam.site';
 
-function isLocalOrigin() {
+const LOCAL_VITE_BACKEND_PROXY = '/api'; // Proxied by vite.config.js → http://localhost:5000
+export function isLocalDevOrigin() {
   if (typeof window === 'undefined') return false;
   const o = window.location?.origin || '';
   return o.startsWith('http://localhost') || o.startsWith('http://127.0.0.1');
 }
 
-// Determine base API URL dynamically based on origin
-// If running on production domain, use same-origin with /kids path when deployed under /kids
+function normalizeBase(origin) {
+  return String(origin || '').replace(/\/$/, '');
+}
+
+/**
+ * Base URL including /api suffix (never trailing slash past /api).
+ */
 export const API_BASE_URL = (() => {
-  try {
-    if (typeof window !== 'undefined') {
-      const origin = window.location.origin || '';
-      // If the frontend is served on the same backend domain, prefer same-origin.
-      // Supports both deployment styles: root (/api) and subpath (/kids/api).
-      if (origin.includes('kids.nodeteam.site')) {
-        return origin.replace(/\/$/, '') + '/api';
-      }
-      if (origin.includes('tovo-b.developteam.site')) {
-        return origin.replace(/\/$/, '') + '/kids/api';
-      }
-    }
-  } catch {
-    // fall back to default below
+  if (typeof window === 'undefined') {
+    return `${normalizeBase(PUBLIC_BACKEND_ORIGIN)}/api`;
   }
-
-  console.log(isLocalOrigin());
-  console.log(isLocalOrigin() ? (import.meta?.env?.VITE_API_URL || LOCAL_API) : PRODUCTION_API);
-  return isLocalOrigin() ? (import.meta?.env?.VITE_API_URL || LOCAL_API) : (import.meta?.env?.VITE_API_URL || PRODUCTION_API);
+  const origin = window.location.origin || '';
+  // Frontend served from same machine as backend
+  if (origin.includes('kids.nodeteam.site')) {
+    return `${normalizeBase(origin)}/api`;
+  }
+  if (origin.includes('tovo-b.developteam.site')) {
+    return `${normalizeBase(origin)}/kids/api`;
+  }
+  // Vite dev: relative path hits dev-server proxy
+  if (isLocalDevOrigin()) {
+    return LOCAL_VITE_BACKEND_PROXY;
+  }
+  return `${normalizeBase(PUBLIC_BACKEND_ORIGIN)}/api`;
 })();
-export const API_HOST = isLocalOrigin() ? (import.meta.env.VITE_API_HOST || LOCAL_HOST) : (import.meta.env.VITE_API_HOST || PRODUCTION_HOST);
 
-// Token refresh interval (in milliseconds)
-// Access token expires in 15 minutes, refresh before that
-export const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutes
+/**
+ * Host origin for socket/full URLs without /api (storefront rarely uses).
+ */
+export const API_HOST = (() => {
+  if (typeof window === 'undefined') {
+    return normalizeBase(PUBLIC_BACKEND_ORIGIN);
+  }
+  const origin = window.location.origin || '';
+  if (origin.includes('kids.nodeteam.site')) return normalizeBase(origin);
+  if (origin.includes('tovo-b.developteam.site')) {
+    return `${normalizeBase(origin)}/kids`;
+  }
+  if (isLocalDevOrigin()) {
+    return 'http://localhost:5000';
+  }
+  return normalizeBase(PUBLIC_BACKEND_ORIGIN);
+})();
 
-// API timeout (in milliseconds)
-export const API_TIMEOUT = 30000; // 30 seconds
+// Token refresh interval (access token ~15m)
+export const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000;
+
+export const API_TIMEOUT = 30000;

@@ -1,16 +1,45 @@
 /**
- * API Configuration – connected to production server
- * Override with .env (VITE_API_URL, VITE_API_HOST) for local backend if needed
+ * API configuration — no .env / import.meta.env required.
+ * Deployed dashboard: PUBLIC_BACKEND_ORIGIN.
+ * Local Vite dev: `/api` + proxy to localhost:5000.
  */
 
-// Vite environment variables must be prefixed with VITE_
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+/** Production backend (HTTPS, no trailing slash). */
+export const PUBLIC_BACKEND_ORIGIN = 'https://kids.nodeteam.site';
 
-// Host without /api (used by socket.io connection)
-export const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000';
+const LOCAL_VITE_API_BASE = '/api';
 
-// Access token expires in 15 minutes, refresh before that
-export const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutes
+export function isLocalDevOrigin() {
+  if (typeof window === 'undefined') return false;
+  const o = window.location?.origin || '';
+  return o.startsWith('http://localhost') || o.startsWith('http://127.0.0.1');
+}
 
-// API timeout (in milliseconds)
-export const API_TIMEOUT = 30000; // 30 seconds
+function normalizeBase(origin) {
+  return String(origin || '').replace(/\/$/, '');
+}
+
+export const API_BASE_URL = (() => {
+  if (typeof window === 'undefined') {
+    return `${normalizeBase(PUBLIC_BACKEND_ORIGIN)}/api`;
+  }
+  if (isLocalDevOrigin()) {
+    return LOCAL_VITE_API_BASE;
+  }
+  return `${normalizeBase(PUBLIC_BACKEND_ORIGIN)}/api`;
+})();
+
+/** Socket.io connects to backend origin without /api */
+export const API_HOST = (() => {
+  if (typeof window === 'undefined') {
+    return normalizeBase(PUBLIC_BACKEND_ORIGIN);
+  }
+  if (isLocalDevOrigin()) {
+    return 'http://localhost:5000';
+  }
+  return normalizeBase(PUBLIC_BACKEND_ORIGIN);
+})();
+
+export const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000;
+
+export const API_TIMEOUT = 30000;

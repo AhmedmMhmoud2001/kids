@@ -6,10 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Default to the local backend during dev. Override via VITE_PROXY_TARGET
-      // (e.g. https://tovo-b.developteam.site/kids) to hit the production API.
+      // Proxies browser /api/* to local backend during dev (see src/api/config.js).
       '/api': {
-        target: process.env.VITE_PROXY_TARGET || 'http://localhost:5000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false
       }
