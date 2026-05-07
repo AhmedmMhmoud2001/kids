@@ -64,10 +64,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate Limiting - Prevent brute force attacks
+// Rate Limiting (optional). Set RATE_LIMIT_DISABLED=true for no global API cap per IP.
+// AUTH_RATE_LIMIT_DISABLED=true removes the tighter cap on POST /auth/login only.
+const parsePositiveInt = (value, fallback) => {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+const rateLimitDisabled =
+    process.env.RATE_LIMIT_DISABLED === 'true' ||
+    process.env.RATE_LIMIT_DISABLED === '1';
+const authRateLimitDisabled =
+    process.env.AUTH_RATE_LIMIT_DISABLED === 'true' ||
+    process.env.AUTH_RATE_LIMIT_DISABLED === '1';
+
+const rateLimitWindowMs = parsePositiveInt(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000);
+const rateLimitMax = parsePositiveInt(process.env.RATE_LIMIT_MAX, 1000);
+
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Limit each IP
+    windowMs: rateLimitWindowMs,
+    max: rateLimitMax,
     message: {
         success: false,
         message: 'Too many requests, please try again later.',
@@ -80,8 +95,10 @@ const limiter = rateLimit({
         return req.path === '/api/health' || req.path === '/kids/api/health';
     }
 });
-app.use('/api', limiter);
-app.use('/kids/api', limiter);
+if (!rateLimitDisabled) {
+    app.use('/api', limiter);
+    app.use('/kids/api', limiter);
+}
 
 // Stricter rate limit for auth routes
 const authLimiter = rateLimit({
@@ -93,8 +110,10 @@ const authLimiter = rateLimit({
         code: 'AUTH_RATE_LIMIT'
     }
 });
-app.use('/api/auth/login', authLimiter);
-app.use('/kids/api/auth/login', authLimiter);
+if (!authRateLimitDisabled) {
+    app.use('/api/auth/login', authLimiter);
+    app.use('/kids/api/auth/login', authLimiter);
+}
 
 // ========================================
 // Performance Middlewares
