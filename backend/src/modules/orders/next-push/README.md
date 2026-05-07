@@ -47,7 +47,11 @@ see or trigger a push.
 - **"Missing next.co.uk URL on product X"** — open the product in the admin
   dashboard, paste the URL into the "Next.co.uk URL" field, save. Re-import
   the Excel to bulk-fix.
-- **`UNAVAILABLE`** — the variant is genuinely out of stock on next.co.uk,
+- **`UNAVAILABLE`** — the variant is genuinely out of stock on next.co.uk
+  (`available: false`), or colour/size label on our record doesn't
+  match exact label on site. Compare `ProductVariant.externalColor / externalSize`
+  to swatch label on the live product page; update via
+  variant edit modal.
   or the colour/size label on our record doesn't match the exact label on
   the site. Compare `ProductVariant.externalColor / externalSize` to the
   swatch label on the live product page; update via the variant edit modal.

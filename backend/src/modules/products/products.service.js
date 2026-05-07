@@ -139,6 +139,7 @@ exports.create = async (data) => {
                             stock: Math.max(0, parseInt(v.stock, 10) || 0),
                             lowStockThreshold,
                             sku,
+                            available: v.available !== undefined && v.available !== '' ? /^(1|true|yes)$/i.test(String(v.available)) : true,
                             externalSku: v.externalSku ? String(v.externalSku).trim() : null,
                             externalColor: v.externalColor ? String(v.externalColor).trim() : null,
                             externalSize: v.externalSize ? String(v.externalSize).trim() : null
@@ -449,6 +450,7 @@ exports.update = async (id, data) => {
             const price = v.price != null && v.price !== '' ? Number(v.price) : 0;
             const stock = Math.max(0, parseInt(v.stock, 10) || 0);
             const lowStockThreshold = v.lowStockThreshold != null && v.lowStockThreshold !== '' ? Math.max(0, parseInt(v.lowStockThreshold, 10)) : null;
+            const available = v.available !== undefined && v.available !== '' ? /^(1|true|yes)$/i.test(String(v.available)) : true;
             // next.co.uk external fields (optional). Only included in the update when provided.
             const externalPatch = {};
             if (v.externalSku !== undefined) externalPatch.externalSku = v.externalSku === '' ? null : String(v.externalSku).trim();
@@ -459,7 +461,7 @@ exports.update = async (id, data) => {
                 if (v.id && existingMap.has(v.id)) {
                     await prisma.productVariant.update({
                         where: { id: v.id },
-                        data: { colorId, sizeId, price, stock, lowStockThreshold, sku, ...externalPatch }
+                        data: { colorId, sizeId, price, stock, lowStockThreshold, sku, available, ...externalPatch }
                     });
                 } else {
                     const newSku = sku || `${baseSku}-${idx + 1}`;
@@ -585,7 +587,7 @@ exports.delete = async (id) => {
 const MAX_IMAGES_PER_COLOR = 8;
 const EXCEL_HEADERS = [
     'productId', 'variantId', 'productSku', 'name', 'description', 'categorySlug', 'brandName', 'basePrice', 'isActive', 'isBestSeller',
-    'color', 'size', 'price', 'stock', 'lowStockThreshold', 'sku',
+    'color', 'size', 'price', 'stock', 'lowStockThreshold', 'sku', 'available',
     ...Array.from({ length: MAX_IMAGES_PER_COLOR }, (_, i) => `image${i + 1}`),
     'sourceUrl', 'externalSku', 'variantExternalSku', 'externalColor', 'externalSize'
 ];
@@ -621,7 +623,7 @@ exports.exportExcel = async (audience) => {
                 imagesForColor.forEach((url, idx) => { if (idx < MAX_IMAGES_PER_COLOR) imageCells[idx] = url; });
                 rows.push([
                     p.id, v.id, p.sku ?? '', p.name, p.description ?? '', categorySlug, brandName, basePrice, isActive, isBestSeller,
-                    v.color?.name ?? '', v.size?.name ?? '', v.price ?? '', v.stock ?? 0, v.lowStockThreshold ?? '', v.sku ?? '',
+                    v.color?.name ?? '', v.size?.name ?? '', v.price ?? '', v.stock ?? 0, v.lowStockThreshold ?? '', v.sku ?? '', v.available ?? 1,
                     ...imageCells,
                     p.sourceUrl ?? '', p.externalSku ?? '', v.externalSku ?? '', v.externalColor ?? '', v.externalSize ?? ''
                 ]);
@@ -629,7 +631,7 @@ exports.exportExcel = async (audience) => {
         } else {
             rows.push([
                 p.id, '', p.sku ?? '', p.name, p.description ?? '', categorySlug, brandName, basePrice, isActive, isBestSeller,
-                '', '', '', 0, '', '',
+                '', '', '', 0, '', '', '1',
                 ...Array(MAX_IMAGES_PER_COLOR).fill(''),
                 p.sourceUrl ?? '', p.externalSku ?? '', '', '', ''
             ]);
@@ -652,7 +654,7 @@ exports.getTemplateBuffer = (audience) => {
     const externalSizeExample = isNext ? 'M' : '';
     const exampleRow = [
         '', '', 'PRD-EXT-001', 'Example Product', 'Description', 'clothing', 'Nike', '99.99', '1', '0',
-        'Red', 'M', '99.99', '10', '5', 'SKU-001',
+        'Red', 'M', '99.99', '10', '5', 'SKU-001', '1',
         ...Array(MAX_IMAGES_PER_COLOR).fill(''),
         sourceUrlExample, externalSkuExample, variantExternalSkuExample, externalColorExample, externalSizeExample
     ];
@@ -737,6 +739,7 @@ exports.importFromExcel = async (buffer, audience) => {
         const stockStr = getVal(row, 'stock');
         const lowStockStr = getVal(row, 'lowStockThreshold');
         const sku = getVal(row, 'sku'); // variant sku
+        const availableStr = getVal(row, 'available'); // variant availability
         const productSkuInput = getVal(row, 'productSku');
         // next.co.uk source fields (optional; NEXT audience only)
         const sourceUrlInput = getVal(row, 'sourceUrl');
@@ -925,6 +928,7 @@ exports.importFromExcel = async (buffer, audience) => {
                 variant.stock === stock &&
                 (variant.lowStockThreshold ?? null) === lowStockThreshold &&
                 variant.sku === sku &&
+                variant.available === available &&
                 (variant.externalSku ?? null) === (newExternalVariantSku ?? null) &&
                 (variant.externalColor ?? null) === (newExternalColor ?? null) &&
                 (variant.externalSize ?? null) === (newExternalSize ?? null);
@@ -939,7 +943,7 @@ exports.importFromExcel = async (buffer, audience) => {
                     await prisma.productVariant.update({
                         where: { id: variant.id },
                         data: {
-                            price, stock, lowStockThreshold, sku,
+                            price, stock, lowStockThreshold, sku, available,
                             externalSku: newExternalVariantSku,
                             externalColor: newExternalColor,
                             externalSize: newExternalSize
@@ -962,6 +966,7 @@ exports.importFromExcel = async (buffer, audience) => {
                         stock,
                         lowStockThreshold,
                         sku,
+                        available,
                         externalSku: newExternalVariantSku,
                         externalColor: newExternalColor,
                         externalSize: newExternalSize

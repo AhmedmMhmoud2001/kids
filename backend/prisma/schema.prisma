@@ -188,6 +188,7 @@ model ProductVariant {
   stock             Int    @default(0) // كمية هذا اللون + الحجم
   lowStockThreshold Int? // عند وصول المخزون لهذا الرقم أو أقل = Low Stock (null = افتراضي 5)
   sku               String @unique
+  available         Boolean @default(true) // false if out of stock, unavailable, or sold out; true otherwise
 
   // next.co.uk source reference for the browser-extension cart push (NEXT audience only)
   externalSku   String? @db.VarChar(100)
