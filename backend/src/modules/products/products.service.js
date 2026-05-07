@@ -740,6 +740,10 @@ exports.importFromExcel = async (buffer, audience) => {
         const lowStockStr = getVal(row, 'lowStockThreshold');
         const sku = getVal(row, 'sku'); // variant sku
         const availableStr = getVal(row, 'available'); // variant availability
+        // Default to true when the column is missing/empty (the scraper Excel
+        // template doesn't emit an `available` column — it conveys the same
+        // info via stock=0). Mirrors the logic in createForAudience above.
+        const available = availableStr !== '' ? /^(1|true|yes)$/i.test(availableStr) : true;
         const productSkuInput = getVal(row, 'productSku');
         // next.co.uk source fields (optional; NEXT audience only)
         const sourceUrlInput = getVal(row, 'sourceUrl');

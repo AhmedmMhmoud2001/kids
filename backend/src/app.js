@@ -15,7 +15,7 @@ const { csrfProtection } = require('./utils/security');
 const app = express();
 
 // Trust proxy (required for Heroku, Vercel, Nginx, etc.)
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // ========================================
 // Security Middlewares
