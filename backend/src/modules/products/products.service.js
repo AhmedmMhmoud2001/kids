@@ -698,6 +698,42 @@ async function resolveBrandId(brandName) {
     return brand ? brand.id : null;
 }
 
+/**
+ * Resolve a variant SKU that doesn't collide with another product's variants.
+ * The next.co.uk crawler frequently emits the same variant SKU for distinct
+ * products (the SKU encodes the colour+size combo, not the product), so we
+ * namespace with the parent product's SKU when needed.
+ *
+ * Returns the original sku when free, or `${prefix}-${sku}` (possibly with a
+ * numeric suffix) when the original belongs to a different product.
+ */
+async function resolveUniqueVariantSku(rawSku, productId, currentVariantId, productSkuHint) {
+    if (!rawSku) return rawSku;
+    const existing = await prisma.productVariant.findFirst({
+        where: { sku: rawSku },
+        select: { id: true, productId: true }
+    });
+    if (!existing) return rawSku;
+    if (existing.id === currentVariantId) return rawSku;
+    if (existing.productId === productId) return rawSku;
+
+    const prefix = productSkuHint
+        ? String(productSkuHint).trim()
+        : String(productId).slice(0, 8);
+
+    for (let n = 1; n <= 10; n++) {
+        const candidate = n === 1 ? `${prefix}-${rawSku}` : `${prefix}-${rawSku}-${n}`;
+        const conflict = await prisma.productVariant.findFirst({
+            where: { sku: candidate },
+            select: { id: true, productId: true }
+        });
+        if (!conflict) return candidate;
+        if (conflict.id === currentVariantId) return candidate;
+        if (conflict.productId === productId) return candidate;
+    }
+    return `${prefix}-${rawSku}-${Date.now()}`;
+}
+
 /** Import products from Excel buffer. Each row = one variant. productId or sku identifies product; variantId identifies variant. Create/update product once; create/update variant; images as URLs only. */
 exports.importFromExcel = async (buffer, audience) => {
     const wb = XLSX.read(buffer, { type: 'buffer' });
@@ -716,6 +752,7 @@ exports.importFromExcel = async (buffer, audience) => {
     const updated = { products: [], variants: [] };
     let skipped = 0;
     const errors = [];
+    const warnings = [];
     const productCache = new Map();
     const processedProductIds = new Set();
     const updatedProductIds = new Set(); // Track which products were updated in this batch
@@ -775,7 +812,10 @@ exports.importFromExcel = async (buffer, audience) => {
             });
             if (existingProduct) productId = existingProduct.id;
         }
-        if (!productId && sku) {
+        // Only fall back to variant-SKU lookup when the row has NO productSku and
+        // NO productId. Otherwise the crawler's reused variant SKUs would silently
+        // attach distinct products to the first one that claimed the SKU.
+        if (!productId && !productSkuInput && !productIdStr && sku) {
             const variantBySku = await prisma.productVariant.findFirst({
                 where: { sku },
                 include: { product: { include: { category: true, brandRel: true } } }
@@ -852,7 +892,11 @@ exports.importFromExcel = async (buffer, audience) => {
                 errors.push(`Row ${i + 1}: categorySlug is required when creating a new product.`);
                 continue;
             }
-            const cacheKey = `${name || ''}|${description || ''}|${categorySlug || ''}|${brandName || ''}`;
+            // Prefer productSku as the cache key so two products that happen to
+            // share the same name/description/category/brand stay separate.
+            const cacheKey = productSkuInput
+                ? `sku:${productSkuInput}`
+                : `meta:${name || ''}|${description || ''}|${categorySlug || ''}|${brandName || ''}`;
             if (productCache.has(cacheKey)) {
                 productId = productCache.get(cacheKey);
             } else {
@@ -902,7 +946,10 @@ exports.importFromExcel = async (buffer, audience) => {
         let variant = null;
         if (variantIdStr) {
             const vid = variantIdStr;
-            if (vid) variant = await prisma.productVariant.findUnique({ where: { id: vid } });
+            if (vid) {
+                const candidate = await prisma.productVariant.findUnique({ where: { id: vid } });
+                if (candidate && candidate.productId === productId) variant = candidate;
+            }
         }
         if (!variant) {
             variant = await prisma.productVariant.findFirst({
@@ -910,7 +957,18 @@ exports.importFromExcel = async (buffer, audience) => {
             });
         }
         if (!variant) {
-            variant = await prisma.productVariant.findFirst({ where: { sku } });
+            // SKU fallback is only valid when the existing variant belongs to
+            // the SAME product. Cross-product SKU reuse from the crawler must
+            // not cause silent merging.
+            const bySku = await prisma.productVariant.findFirst({ where: { sku } });
+            if (bySku && bySku.productId === productId) variant = bySku;
+        }
+
+        // The crawler often reuses the same variant SKU on multiple products.
+        // Resolve to a unique SKU upfront so create/update doesn't fail with P2002.
+        const resolvedSku = await resolveUniqueVariantSku(sku, productId, variant?.id, productSkuInput);
+        if (resolvedSku !== sku) {
+            warnings.push(`Row ${i + 1}: variant SKU "${sku}" was already used by another product; saved as "${resolvedSku}".`);
         }
 
         // Resolve next.co.uk variant fields. For NEXT audience, the external strings
@@ -935,7 +993,7 @@ exports.importFromExcel = async (buffer, audience) => {
                 Math.abs(variant.price - price) < 0.01 &&
                 variant.stock === stock &&
                 (variant.lowStockThreshold ?? null) === lowStockThreshold &&
-                variant.sku === sku &&
+                variant.sku === resolvedSku &&
                 variant.available === available &&
                 (variant.externalSku ?? null) === (newExternalVariantSku ?? null) &&
                 (variant.externalColor ?? null) === (newExternalColor ?? null) &&
@@ -952,16 +1010,16 @@ exports.importFromExcel = async (buffer, audience) => {
                     await prisma.productVariant.update({
                         where: { id: variant.id },
                         data: {
-                            price, stock, lowStockThreshold, sku, available,
+                            price, stock, lowStockThreshold, sku: resolvedSku, available,
                             externalSku: newExternalVariantSku,
                             externalColor: newExternalColor,
                             externalSize: newExternalSize,
                             sourceUrl: newVariantSourceUrl
                         }
                     });
-                    updated.variants.push({ id: variant.id, sku });
+                    updated.variants.push({ id: variant.id, sku: resolvedSku });
                 } catch (err) {
-                    if (err.code === 'P2002') errors.push(`Row ${i + 1}: SKU "${sku}" already used.`);
+                    if (err.code === 'P2002') errors.push(`Row ${i + 1}: SKU "${resolvedSku}" already used.`);
                     else errors.push(`Row ${i + 1}: ${err.message || err}`);
                 }
             }
@@ -975,7 +1033,7 @@ exports.importFromExcel = async (buffer, audience) => {
                         price,
                         stock,
                         lowStockThreshold,
-                        sku,
+                        sku: resolvedSku,
                         available,
                         externalSku: newExternalVariantSku,
                         externalColor: newExternalColor,
@@ -983,10 +1041,10 @@ exports.importFromExcel = async (buffer, audience) => {
                         sourceUrl: newVariantSourceUrl
                     }
                 });
-                created.variants.push({ id: newVariant.id, sku });
+                created.variants.push({ id: newVariant.id, sku: resolvedSku });
             } catch (err) {
                 if (err.code === 'P2002') {
-                    if (err.meta?.target?.includes?.('sku')) errors.push(`Row ${i + 1}: SKU "${sku}" already used.`);
+                    if (err.meta?.target?.includes?.('sku')) errors.push(`Row ${i + 1}: SKU "${resolvedSku}" already used.`);
                     else errors.push(`Row ${i + 1}: variant (color+size) already exists for this product.`);
                 } else errors.push(`Row ${i + 1}: ${err.message || err}`);
             }
@@ -1014,5 +1072,5 @@ exports.importFromExcel = async (buffer, audience) => {
         }
     }
 
-    return { created, updated, skipped, errors };
+    return { created, updated, skipped, errors, warnings };
 };

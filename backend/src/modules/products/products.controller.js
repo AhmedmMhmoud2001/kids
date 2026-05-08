@@ -246,7 +246,7 @@ exports.importExcel = asyncHandler(async (req, res) => {
     if (req.user?.role === 'ADMIN_KIDS' && audience !== 'KIDS') throw AppError.forbidden('Kids admin can only import KIDS');
     if (req.user?.role === 'ADMIN_NEXT' && audience !== 'NEXT') throw AppError.forbidden('Next admin can only import NEXT');
     if (!req.file || !req.file.buffer) throw AppError.badRequest('No Excel file uploaded');
-    const { created, updated, skipped, errors } = await productService.importFromExcel(req.file.buffer, audience);
+    const { created, updated, skipped, errors, warnings } = await productService.importFromExcel(req.file.buffer, audience);
     cache.delByPattern('products:*');
     cache.del('products:colors');
     res.status(201).json({
@@ -255,7 +255,8 @@ exports.importExcel = asyncHandler(async (req, res) => {
             created: { products: created.products, variants: created.variants },
             updated: { products: updated.products, variants: updated.variants },
             skipped,
-            errors: errors.length ? errors : undefined
+            errors: errors.length ? errors : undefined,
+            warnings: warnings && warnings.length ? warnings : undefined
         }
     });
 });
