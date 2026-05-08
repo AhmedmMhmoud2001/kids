@@ -119,9 +119,14 @@ const KidsExcel = () => {
                                 <AlertCircle size={18} />
                                 {t(tx('Issues Detected', 'تم اكتشاف مشاكل'))}
                             </div>
-                            <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                            <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-2">
                                 {t(tx(`${importResult.errors.length} row(s) failed or had validation errors. Please check your data and try again.`, `فشل ${importResult.errors.length} صف(صفوف) أو يحتوي على أخطاء تحقق. يرجى مراجعة البيانات والمحاولة مرة أخرى.`))}
                             </p>
+                            <ul className="mt-2 space-y-1 max-h-48 overflow-y-auto text-xs text-red-700 dark:text-red-300 list-disc ps-5">
+                                {importResult.errors.map((err, idx) => (
+                                    <li key={idx} className="break-words">{typeof err === 'string' ? err : (err?.message || JSON.stringify(err))}</li>
+                                ))}
+                            </ul>
                         </div>
                     )}
                 </div>
