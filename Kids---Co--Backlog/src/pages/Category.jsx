@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import Container from '../components/common/Container';
 import Breadcrumb from '../components/common/Breadcrumb';
@@ -35,6 +35,7 @@ const Category = () => {
 
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedOnceRef = useRef(false);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid-4');
   const [itemsPerPage, setItemsPerPage] = useState(15);
@@ -61,27 +62,42 @@ const Category = () => {
     window.scrollTo(0, 0);
   }, [category, queryAudience]); // Use queryAudience instead of audience
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      // Only load if we have both category and audience
-      if (!category || !audience) return;
+  const loadProducts = useCallback(async ({ silent } = {}) => {
+    // Only load if we have both category and audience
+    if (!category || !audience) return;
 
-      try {
-        setIsLoading(true);
-        const res = await fetchProducts({
-          category,
-          audience,
-          ...(offerBrandSlug ? { brands: [offerBrandSlug] } : {})
-        });
-        setProducts(res.data || []);
-      } catch (err) {
-        console.error("Error fetching category products:", err);
-      } finally {
-        setIsLoading(false);
-      }
+    try {
+      if (!silent || !hasLoadedOnceRef.current) setIsLoading(true);
+      const res = await fetchProducts({
+        category,
+        audience,
+        ...(offerBrandSlug ? { brands: [offerBrandSlug] } : {})
+      });
+      setProducts(res.data || []);
+      hasLoadedOnceRef.current = true;
+    } catch (err) {
+      console.error("Error fetching category products:", err);
+    } finally {
+      if (!silent || !hasLoadedOnceRef.current) setIsLoading(false);
+    }
+  }, [category, audience, offerBrandSlug]);
+
+  useEffect(() => {
+    loadProducts({ silent: false });
+  }, [loadProducts]);
+
+  // Refetch periodically so currency-rate edits reflect without manual refresh.
+  useEffect(() => {
+    const onFocus = () => loadProducts({ silent: true });
+    window.addEventListener('focus', onFocus);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') loadProducts({ silent: true });
+    }, 15000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(interval);
     };
-    loadProducts();
-  }, [category, queryAudience, contextAudience, offerBrandSlug]); // Depend on both URL and context audience
+  }, [loadProducts]);
 
   // Prefer backend localized category name if available
   const fallbackCategoryName =

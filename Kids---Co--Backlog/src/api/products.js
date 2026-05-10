@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './config';
+import { colornames } from 'color-name-list';
 
 // Map common color names to hex for swatch display (when backend has hexCode: null) — English only
 const COLOR_NAME_TO_HEX = {
@@ -16,6 +17,112 @@ const COLOR_NAME_TO_HEX = {
     denim: '#1e40af', aqua: '#22d3ee', petrol: '#0e7490', steel: '#94a3b8', ash: '#94a3b8',
     khaki: '#737373', tan: '#d4a574', camel: '#c4a574', chocolate: '#78350f', coffee: '#6f4e37',
     honey: '#fbbf24', butter: '#fef08a', vanilla: '#fef9c3', milk: '#f8fafc', pearl: '#e2e8f0',
+    // Common compound / merchandising names
+    neutral: '#a3a3a3',
+    cobalt: '#0047ab',
+    navyblue: '#1e3a8a',
+    lightblue: '#93c5fd',
+    berry: '#be123c',
+    character: '#a3a3a3',
+    multi: '#a3a3a3',
+};
+
+// Build a lookup map from the package list (case-insensitive).
+// This covers a far wider set than our hand-written map.
+const COLOR_LIST_LOOKUP = (() => {
+    const map = new Map();
+    try {
+        for (const c of colornames || []) {
+            const n = (c?.name ?? '').toString().toLowerCase().trim();
+            const h = (c?.hex ?? '').toString().trim();
+            if (n && h && !map.has(n)) map.set(n, h);
+        }
+    } catch {
+        // ignore – fallback will just use our small map
+    }
+    return map;
+})();
+
+const NORMALIZE_COLOR_NAME_REGEX = /\b(check|checked|stripe|striped|print|printed|pattern|patterned|multi|solid|plain|melange|marl|heather|character|colour|color)\b/gi;
+
+const normalizeColorName = (input) => {
+    if (!input) return '';
+    return String(input)
+        .toLowerCase()
+        .replace(/[_/]+/g, ' ')
+        .replace(/[()\-]+/g, ' ')
+        .replace(NORMALIZE_COLOR_NAME_REGEX, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const resolveHexForColorName = (name) => {
+    const key = normalizeColorName(name);
+    if (!key) return null;
+
+    // 1) Direct hit in our small curated map
+    if (COLOR_NAME_TO_HEX[key]) return COLOR_NAME_TO_HEX[key];
+
+    // 2) Direct hit in package list
+    const listHit = COLOR_LIST_LOOKUP.get(key);
+    if (listHit) return listHit;
+
+    // 3) Try without spaces (e.g. "navy blue" -> "navyblue")
+    const compact = key.replace(/\s+/g, '');
+    if (COLOR_NAME_TO_HEX[compact]) return COLOR_NAME_TO_HEX[compact];
+    const compactListHit = COLOR_LIST_LOOKUP.get(compact);
+    if (compactListHit) return compactListHit;
+
+    // 4) Try last token / last two tokens (e.g. "light blue check" -> "light blue" -> "blue")
+    const parts = key.split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+        const lastTwo = parts.slice(-2).join(' ');
+        if (COLOR_NAME_TO_HEX[lastTwo]) return COLOR_NAME_TO_HEX[lastTwo];
+        const lastTwoList = COLOR_LIST_LOOKUP.get(lastTwo);
+        if (lastTwoList) return lastTwoList;
+    }
+    if (parts.length >= 1) {
+        const last = parts[parts.length - 1];
+        if (COLOR_NAME_TO_HEX[last]) return COLOR_NAME_TO_HEX[last];
+        const lastList = COLOR_LIST_LOOKUP.get(last);
+        if (lastList) return lastList;
+    }
+
+    return null;
+};
+
+// Deterministic fallback: any unknown color name becomes a stable hex.
+// This guarantees swatches always render even for arbitrary customer-entered names.
+const hashStringToHex = (input) => {
+    const s = normalizeColorName(input) || String(input || '').toLowerCase().trim();
+    if (!s) return null;
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+        hash = ((hash << 5) - hash) + s.charCodeAt(i);
+        hash |= 0;
+    }
+    // Map hash to HSL for nicer, saturated colors then convert to hex.
+    const hue = Math.abs(hash) % 360;
+    const sat = 55; // keep readable
+    const light = 55;
+    const hslToHex = (h, sPct, lPct) => {
+        const s = sPct / 100;
+        const l = lPct / 100;
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const hh = h / 60;
+        const x = c * (1 - Math.abs((hh % 2) - 1));
+        let r1 = 0, g1 = 0, b1 = 0;
+        if (0 <= hh && hh < 1) { r1 = c; g1 = x; b1 = 0; }
+        else if (1 <= hh && hh < 2) { r1 = x; g1 = c; b1 = 0; }
+        else if (2 <= hh && hh < 3) { r1 = 0; g1 = c; b1 = x; }
+        else if (3 <= hh && hh < 4) { r1 = 0; g1 = x; b1 = c; }
+        else if (4 <= hh && hh < 5) { r1 = x; g1 = 0; b1 = c; }
+        else { r1 = c; g1 = 0; b1 = x; }
+        const m = l - c / 2;
+        const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+        return `#${toHex(r1)}${toHex(g1)}${toHex(b1)}`;
+    };
+    return hslToHex(hue, sat, light);
 };
 
 // Helper to normalize product data from backend (supports Prisma: variants, colorImages, category, brandRel)
@@ -135,9 +242,10 @@ export const getProductImageForColor = (product, colorName) => {
 export const getColorSwatchStyle = (color) => {
     if (!color) return {};
     if (typeof color === 'string' && /^#([0-9A-Fa-f]{3}){1,2}$/.test(color)) return { backgroundColor: color };
-    const key = typeof color === 'string' ? color.toLowerCase().trim() : color;
-    const hex = COLOR_NAME_TO_HEX[key];
+    const hex = resolveHexForColorName(color);
     if (hex) return { backgroundColor: hex };
+    const fallback = hashStringToHex(color);
+    if (fallback) return { backgroundColor: fallback };
     return {};
 };
 
@@ -155,9 +263,16 @@ export const fetchProducts = async (filters = {}) => {
         if (filters.colors && filters.colors.length > 0) params.append('colors', filters.colors.join(','));
         if (filters.sortBy) params.append('sortBy', filters.sortBy);
         if (filters.search) params.append('search', filters.search);
+        // Cache-buster so currency-rate edits reflect immediately even behind any proxy/browser caching layers
+        params.append('_ts', String(Date.now()));
 
         const url = `${API_BASE_URL}/products${params.toString() ? '?' + params.toString() : ''}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
         const data = await response.json();
 
         if (!response.ok) {
@@ -201,7 +316,12 @@ export const fetchColors = async () => {
 // Get single product by ID
 export const fetchProductById = async (id) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/products/${id}`);
+        const response = await fetch(`${API_BASE_URL}/products/${id}?_ts=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
         const data = await response.json();
 
         if (!response.ok) {
