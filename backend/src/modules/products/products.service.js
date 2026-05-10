@@ -798,7 +798,26 @@ exports.importFromExcel = async (buffer, audience) => {
         let productId = null;
         let existingProduct = null;
 
-        if (productIdStr) {
+        // Treat rows with the same product name (case-insensitive) as the same
+        // product — both within this Excel batch and against existing DB rows
+        // for the same audience. Lets the user list one product across many
+        // rows (one per variant) without producing duplicates.
+        const normalizedName = name ? name.trim().toLowerCase() : '';
+        const cacheKeyName = normalizedName ? `name:${normalizedName}` : null;
+        const cacheKeySku = productSkuInput ? `sku:${productSkuInput.trim().toLowerCase()}` : null;
+
+        // In-batch cache hit (a previous row in this file already resolved it).
+        if (cacheKeySku && productCache.has(cacheKeySku)) productId = productCache.get(cacheKeySku);
+        else if (cacheKeyName && productCache.has(cacheKeyName)) productId = productCache.get(cacheKeyName);
+        if (productId) {
+            existingProduct = await prisma.product.findUnique({
+                where: { id: productId },
+                include: { category: true, brandRel: true }
+            });
+            if (!existingProduct) productId = null;
+        }
+
+        if (!productId && productIdStr) {
             existingProduct = await prisma.product.findFirst({
                 where: { id: productIdStr, audience },
                 include: { category: true, brandRel: true }
@@ -812,10 +831,19 @@ exports.importFromExcel = async (buffer, audience) => {
             });
             if (existingProduct) productId = existingProduct.id;
         }
-        // Only fall back to variant-SKU lookup when the row has NO productSku and
-        // NO productId. Otherwise the crawler's reused variant SKUs would silently
-        // attach distinct products to the first one that claimed the SKU.
-        if (!productId && !productSkuInput && !productIdStr && sku) {
+        // Match by name within the same audience (relies on MySQL's default
+        // case-insensitive collation). Same name = same product.
+        if (!productId && name) {
+            existingProduct = await prisma.product.findFirst({
+                where: { name, audience },
+                include: { category: true, brandRel: true }
+            });
+            if (existingProduct) productId = existingProduct.id;
+        }
+        // Variant-SKU fallback: only when the row carries no product identity at
+        // all (no id, no productSku, no name). Prevents cross-product SKU reuse
+        // from the next.co.uk crawler from silently merging distinct products.
+        if (!productId && !productSkuInput && !productIdStr && !name && sku) {
             const variantBySku = await prisma.productVariant.findFirst({
                 where: { sku },
                 include: { product: { include: { category: true, brandRel: true } } }
@@ -824,6 +852,12 @@ exports.importFromExcel = async (buffer, audience) => {
                 existingProduct = variantBySku.product;
                 productId = existingProduct.id;
             }
+        }
+
+        // Populate the in-batch cache so subsequent rows skip these lookups.
+        if (productId) {
+            if (cacheKeyName) productCache.set(cacheKeyName, productId);
+            if (cacheKeySku) productCache.set(cacheKeySku, productId);
         }
 
         if (productId) {
@@ -892,11 +926,11 @@ exports.importFromExcel = async (buffer, audience) => {
                 errors.push(`Row ${i + 1}: categorySlug is required when creating a new product.`);
                 continue;
             }
-            // Prefer productSku as the cache key so two products that happen to
-            // share the same name/description/category/brand stay separate.
-            const cacheKey = productSkuInput
-                ? `sku:${productSkuInput}`
-                : `meta:${name || ''}|${description || ''}|${categorySlug || ''}|${brandName || ''}`;
+            // Prefer productSku, then name, as the cache key so identical names
+            // in the same file map to a single newly-created product.
+            const cacheKey = cacheKeySku
+                ?? cacheKeyName
+                ?? `meta:${name || ''}|${description || ''}|${categorySlug || ''}|${brandName || ''}`;
             if (productCache.has(cacheKey)) {
                 productId = productCache.get(cacheKey);
             } else {
@@ -923,6 +957,8 @@ exports.importFromExcel = async (buffer, audience) => {
                     });
                     productId = product.id;
                     productCache.set(cacheKey, productId);
+                    if (cacheKeyName && cacheKey !== cacheKeyName) productCache.set(cacheKeyName, productId);
+                    if (cacheKeySku && cacheKey !== cacheKeySku) productCache.set(cacheKeySku, productId);
                     processedProductIds.add(productId);
                     created.products.push({ id: product.id, name: product.name });
                 } catch (err) {

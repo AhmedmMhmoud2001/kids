@@ -101,7 +101,20 @@ export const CartProvider = ({ children }) => {
         const normalizedItems = res.data.items.map(item => {
           const product = item.productVariant?.product ?? item.product;
           const base = normalizeProduct(product);
-          const price = item.productVariant?.price ?? base.price ?? base.basePrice;
+          // IMPORTANT: prices shown to customer must be in EGP (use the same normalization rule everywhere).
+          // `normalizeProduct` already converts `base.price` and `base.variants[].price` using categoryExchangeRateToEgp.
+          // When cart items come from backend, `item.productVariant.price` may be raw (category currency), so we MUST
+          // prefer the normalized variant price.
+          const rate = Number(base.categoryExchangeRateToEgp ?? 1) || 1;
+          const variantId = item.productVariant?.id;
+          const normalizedVariantPrice = variantId
+            ? (base.variants || []).find(v => v?.id === variantId)?.price
+            : null;
+          const rawVariantPrice = item.productVariant?.price != null ? Number(item.productVariant.price) : null;
+          const price = normalizedVariantPrice
+            ?? (rawVariantPrice != null && Number.isFinite(rawVariantPrice) ? rawVariantPrice * rate : null)
+            ?? base.price
+            ?? (base.basePrice != null ? Number(base.basePrice) * rate : base.basePrice);
           const selectedSize = item.productVariant?.size?.name ?? item.selectedSize;
           const selectedColor = item.productVariant?.color?.name ?? item.selectedColor;
           const imageForColor = getImageForColor(base, selectedColor) ?? base.image;

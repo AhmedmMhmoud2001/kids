@@ -8,7 +8,7 @@ import FilterSidebarWrapper from '../components/filter/FilterSidebarWrapper';
 import ProductQuickView from '../components/product/ProductQuickView';
 import Pagination from '../components/common/Pagination';
 import EmptyState from '../components/common/EmptyState';
-import { applyFilters } from '../utils/productFilters';
+import { applyFilters, explodeProductsByColor } from '../utils/productFilters';
 import { fetchProducts } from '../api/products';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -102,11 +102,14 @@ const Category = () => {
     [offerProductIdsRaw]
   );
 
+  // Show one card per colour (e.g. 3-colour product → 3 cards) before filtering/paging.
+  const explodedProducts = useMemo(() => explodeProductsByColor(products), [products]);
+
   const filteredProducts = useMemo(() => {
-    const byFilters = applyFilters(products, filters, category);
+    const byFilters = applyFilters(explodedProducts, filters, category);
     if (!offerProductIds.size) return byFilters;
     return byFilters.filter((p) => offerProductIds.has(String(p.id)));
-  }, [products, category, filters, offerProductIds]);
+  }, [explodedProducts, category, filters, offerProductIds]);
 
   // Paginate products
   const paginatedProducts = useMemo(() => {
@@ -167,7 +170,7 @@ const Category = () => {
           itemsPerPage={itemsPerPage}
           onItemsPerPageChange={handleItemsPerPageChange}
           filteredCount={filteredProducts.length}
-          totalCount={products.length}
+          totalCount={explodedProducts.length}
           hasActiveFilters={hasActiveFilters}
           onClearFilters={clearFilters}
           filters={filters}

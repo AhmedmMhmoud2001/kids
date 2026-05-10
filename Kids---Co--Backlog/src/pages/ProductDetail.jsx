@@ -231,6 +231,8 @@ const ProductDetail = () => {
   const safeSelectedImage = Math.min(selectedImage, Math.max(0, images.length - 1));
   const getCategoryPath = () => product.categorySlug || 'shop';
   const getCategoryDisplayName = () => t(product.categoryName || t('productDetail.shop'));
+  const selectedColorName = displayColors?.[safeSelectedColor];
+  const displayProductName = selectedColorName ? `${selectedColorName} ${t(product.name)}` : t(product.name);
   const displayPrice = selectedVariant?.price ?? product.price ?? product.basePrice;
   const finalDisplayPrice = discountPercent > 0
     ? Number(displayPrice || 0) * (1 - discountPercent / 100)
@@ -311,7 +313,7 @@ const ProductDetail = () => {
         <Breadcrumb items={[
           { label: product.audience === 'NEXT' ? t('productDetail.home2') : t('productDetail.home'), to: product.audience === 'NEXT' ? '/home2' : '/' },
           { label: getCategoryDisplayName(), to: `/category/${getCategoryPath()}?audience=${product.audience}` },
-          { label: t(product.name) },
+          { label: displayProductName },
         ]} />
       </div>
 
@@ -379,7 +381,7 @@ const ProductDetail = () => {
         {/* Product Details */}
         <div className="space-y-3 sm:space-y-4 md:space-y-5 w-full max-w-full">
           <div>
-            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 sm:mb-2 md:mb-3 leading-tight break-words">{t(product.name)}</h1>
+            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 sm:mb-2 md:mb-3 leading-tight break-words">{displayProductName}</h1>
             {discountPercent > 0 ? (
               <div className="flex items-center gap-3 flex-wrap">
                 <p className="text-base sm:text-lg text-gray-400 line-through">

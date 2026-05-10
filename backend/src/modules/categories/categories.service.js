@@ -70,14 +70,42 @@ exports.update = async (id, data) => {
     return { ...updated, image: normalizeImageUrl(updated.image) };
 };
 
-// Delete
+// Delete (cascades to all products, their variants, color images, cart items, and favorites)
 exports.delete = async (id) => {
     const category = await prisma.category.findUnique({ where: { id } });
-    if (category && category.image) {
+    if (!category) return null;
+
+    // Collect all product images for filesystem cleanup before transaction
+    const products = await prisma.product.findMany({
+        where: { categoryId: id },
+        select: { id: true }
+    });
+    const productIds = products.map(p => p.id);
+
+    const productImages = productIds.length
+        ? await prisma.productColorImage.findMany({
+            where: { productId: { in: productIds } },
+            select: { imageUrl: true }
+        })
+        : [];
+
+    // Delete category image and product images from filesystem
+    if (category.image) {
         await deleteFileFromUrl(category.image);
     }
+    for (const img of productImages) {
+        await deleteFileFromUrl(img.imageUrl);
+    }
 
-    return prisma.category.delete({
-        where: { id }
+    // Delete in a single transaction to keep DB consistent.
+    // Order matters: favorites first (no cascade from product), then products
+    // (variants, color images, and cart items cascade automatically), then category.
+    return prisma.$transaction(async (tx) => {
+        if (productIds.length) {
+            await tx.favorite.deleteMany({ where: { productId: { in: productIds } } });
+            await tx.cartItem.deleteMany({ where: { productId: { in: productIds } } });
+            await tx.product.deleteMany({ where: { id: { in: productIds } } });
+        }
+        return tx.category.delete({ where: { id } });
     });
 };

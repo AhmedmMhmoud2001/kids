@@ -125,6 +125,87 @@ export const sortProducts = (products, sortBy) => {
 };
 
 /**
+ * Explode each product into one card per color.
+ *
+ * Used on the Category page so a product with N colours renders as N cards.
+ * Each card keeps the original product.id (favourites + routing keep working)
+ * but overrides the displayed name (`${color} ${name}`), images,
+ * price, and variants to reflect just that colour. A `_cardKey` field gives
+ * the React grid a unique key per card.
+ */
+export const explodeProductsByColor = (products) => {
+  if (!Array.isArray(products)) return [];
+
+  const exploded = [];
+
+  for (const product of products) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    if (variants.length === 0) {
+      exploded.push(product);
+      continue;
+    }
+
+    const byColor = new Map();
+    for (const variant of variants) {
+      const colorName = variant.color?.name;
+      if (!colorName) continue;
+      if (!byColor.has(colorName)) {
+        byColor.set(colorName, { color: variant.color, variants: [] });
+      }
+      byColor.get(colorName).variants.push(variant);
+    }
+
+    if (byColor.size === 0) {
+      exploded.push(product);
+      continue;
+    }
+
+    for (const [colorName, group] of byColor) {
+      const colorId = group.color?.id ?? colorName;
+      const family = group.color?.family ?? null;
+      const colorVariants = group.variants;
+      // We intentionally do NOT append size to the card name on category pages.
+
+      const colorImages = Array.isArray(product.colorImages)
+        ? product.colorImages
+            .filter((ci) => ci.colorId === colorId || ci.color?.id === colorId)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .map((ci) => ci.imageUrl)
+            .filter(Boolean)
+        : [];
+
+      const fallbackImages = Array.isArray(product.images) ? product.images : [];
+      const images = colorImages.length > 0 ? colorImages : fallbackImages;
+      const image = images[0] || product.image || null;
+
+      const variantPrices = colorVariants
+        .map((v) => Number(v.price ?? 0))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const price = variantPrices.length > 0 ? Math.min(...variantPrices) : product.price;
+
+      const sizes = [...new Set(colorVariants.map((v) => v.size?.name).filter(Boolean))];
+      const nameParts = [colorName, product.name].filter(Boolean);
+
+      exploded.push({
+        ...product,
+        _cardKey: `${product.id}::${colorId}`,
+        _colorName: colorName,
+        name: nameParts.join(' '),
+        image,
+        images,
+        colors: [colorName],
+        colorFamilies: family ? [family] : [],
+        sizes,
+        price,
+        variants: colorVariants,
+      });
+    }
+  }
+
+  return exploded;
+};
+
+/**
  * Apply all filters and sorting to products
  */
 export const applyFilters = (products, filters, category = null) => {

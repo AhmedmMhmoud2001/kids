@@ -18,7 +18,7 @@ const ProductGrid = ({ products, viewMode = 'grid-4', onQuickView }) => {
   return (
     <div className={`grid ${getGridClass()}`}>
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} onQuickView={onQuickView} />
+        <ProductCard key={product._cardKey || product.id} product={product} onQuickView={onQuickView} />
       ))}
     </div>
   );

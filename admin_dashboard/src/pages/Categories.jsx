@@ -57,7 +57,10 @@ const Categories = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm(t(tx('Are you sure you want to delete this category?', 'هل أنت متأكد من حذف هذا القسم؟')))) {
+        if (window.confirm(t(tx(
+            'Are you sure you want to delete this category? All products inside it will also be permanently deleted.',
+            'هل أنت متأكد من حذف هذا القسم؟ سيتم حذف جميع المنتجات الموجودة بداخله نهائياً.'
+        )))) {
             try {
                 const response = await deleteCategory(id);
                 if (response.success) {

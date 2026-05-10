@@ -163,9 +163,15 @@ exports.removeItem = async (userId, itemId) => {
     });
 };
 
-// Get Cart (include colorImages so frontend can show image per color)
+// Get Cart
+// Include category (for exchangeRateToEgp) so frontend can always display EGP prices,
+// and include colorImages for per-colour thumbnails.
+// Also include variants so the frontend can resolve the selected variant's normalized price.
 const productIncludeWithColorImages = {
     include: {
+        category: true,
+        brandRel: true,
+        variants: { include: { color: true, size: true } },
         colorImages: { include: { color: true }, orderBy: { order: 'asc' } }
     }
 };
