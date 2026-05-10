@@ -37,7 +37,8 @@ export const API_BASE_URL = (() => {
   if (isLocalDevOrigin()) {
     return LOCAL_VITE_BACKEND_PROXY;
   }
-  return `${normalizeBase(PUBLIC_BACKEND_ORIGIN)}/api`;
+  // Vercel: same-origin /api so rewrites (→ tovo-b.developteam.site/kids/api) work
+  return '/api';
 })();
 
 /**
