@@ -31,13 +31,13 @@ export const API_BASE_URL = (() => {
     return `${normalizeBase(origin)}/api`;
   }
   if (origin.includes('tovo-b.developteam.site')) {
-    return `${normalizeBase(origin)}/kids/api`;
+    return `${normalizeBase(PUBLIC_BACKEND_ORIGIN)}/api`;
   }
   // Vite dev: relative path hits dev-server proxy
   if (isLocalDevOrigin()) {
     return LOCAL_VITE_BACKEND_PROXY;
   }
-  // Vercel: same-origin /api so rewrites (→ tovo-b.developteam.site/kids/api) work
+  // Vercel: same-origin /api so rewrites (→ kids.nodeteam.site/api) work
   return '/api';
 })();
 
@@ -51,7 +51,7 @@ export const API_HOST = (() => {
   const origin = window.location.origin || '';
   if (origin.includes('kids.nodeteam.site')) return normalizeBase(origin);
   if (origin.includes('tovo-b.developteam.site')) {
-    return `${normalizeBase(origin)}/kids`;
+    return normalizeBase(PUBLIC_BACKEND_ORIGIN);
   }
   if (isLocalDevOrigin()) {
     return 'http://localhost:5000';
