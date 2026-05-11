@@ -27,4 +27,4 @@ git push
 
 ### 3. تجربة الموقع
 
-افتح https://kids-co-backlog.vercel.app واعمل **Hard Refresh** (Ctrl+Shift+R أو Cmd+Shift+R) عشان المتصفح مايستخدمش نسخة قديمة من الـ JS. بعد كده الطلبات تكون على `https://tovo-b.developteam.site/kids/api`.
+افتح https://kids-co-backlog.vercel.app واعمل **Hard Refresh** (Ctrl+Shift+R أو Cmd+Shift+R) عشان المتصفح مايستخدمش نسخة قديمة من الـ JS. بعد كده الطلبات تكون على `https://kids.nodeteam.site/api`.

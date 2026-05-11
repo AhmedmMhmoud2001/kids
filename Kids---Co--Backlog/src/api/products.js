@@ -263,6 +263,8 @@ export const fetchProducts = async (filters = {}) => {
         if (filters.colors && filters.colors.length > 0) params.append('colors', filters.colors.join(','));
         if (filters.sortBy) params.append('sortBy', filters.sortBy);
         if (filters.search) params.append('search', filters.search);
+        if (filters.page) params.append('page', String(filters.page));
+        if (filters.limit) params.append('limit', String(filters.limit));
         // Cache-buster so currency-rate edits reflect immediately even behind any proxy/browser caching layers
         params.append('_ts', String(Date.now()));
 
@@ -289,6 +291,23 @@ export const fetchProducts = async (filters = {}) => {
         console.error('Error fetching products:', error);
         throw error;
     }
+};
+
+/**
+ * Fetch all products for a given filter by paging through the backend pagination.
+ * Backend caps limit at 100; we fetch up to `maxPages` pages to avoid accidental infinite loops.
+ */
+export const fetchAllProducts = async (filters = {}, { pageSize = 100, maxPages = 50 } = {}) => {
+    const all = [];
+    let page = 1;
+    for (; page <= maxPages; page++) {
+        const res = await fetchProducts({ ...filters, page, limit: pageSize });
+        const batch = Array.isArray(res?.data) ? res.data : [];
+        all.push(...batch);
+        const hasMore = Boolean(res?.pagination?.hasMore);
+        if (!hasMore || batch.length === 0) break;
+    }
+    return { success: true, data: all };
 };
 
 // Get best seller products

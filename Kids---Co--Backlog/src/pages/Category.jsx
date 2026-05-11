@@ -9,7 +9,7 @@ import ProductQuickView from '../components/product/ProductQuickView';
 import Pagination from '../components/common/Pagination';
 import EmptyState from '../components/common/EmptyState';
 import { applyFilters, explodeProductsByColor } from '../utils/productFilters';
-import { fetchProducts } from '../api/products';
+import { fetchAllProducts } from '../api/products';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -68,7 +68,7 @@ const Category = () => {
 
     try {
       if (!silent || !hasLoadedOnceRef.current) setIsLoading(true);
-      const res = await fetchProducts({
+      const res = await fetchAllProducts({
         category,
         audience,
         ...(offerBrandSlug ? { brands: [offerBrandSlug] } : {})

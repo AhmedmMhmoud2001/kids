@@ -114,6 +114,11 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+.swiper-nav-btn.swiper-button-disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .best-sellers-swiper .swiper-button-next:after,
 .best-sellers-swiper .swiper-button-prev:after {
   font-size: 18px !important;

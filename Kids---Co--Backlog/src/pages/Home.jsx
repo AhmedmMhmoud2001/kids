@@ -151,7 +151,11 @@ const Home = () => {
       <BrandsSection />
 
       {/* Categories Section */}
-      <CategoriesSection categories={categories} />
+      <CategoriesSection
+        categories={categories}
+        pageSize={5}
+        gridCols="grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5"
+      />
 
       {/* Best Sellers Section */}
       <BestSellersSection

@@ -51,46 +51,48 @@ const Sidebar = ({ isOpen, onClose }) => {
         `}
         style={{ backgroundColor: bgColor, borderRight: `1px solid ${borderColor}` }}
       >
-        <nav className="p-4 space-y-1">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={() => setActiveItem(item.path)}
+        <div className="h-full flex flex-col">
+          <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
+            {menuItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={() => setActiveItem(item.path)}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                  ${activeItem === item.path 
+                    ? 'text-[#5DA5F9] font-medium' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                  }
+                  ${isCollapsed ? 'lg:justify-center lg:px-3' : ''}
+                `}
+                style={activeItem === item.path ? { backgroundColor: activeBg } : {}}
+              >
+                <item.icon className={`w-5 h-5 flex-shrink-0 ${activeItem === item.path ? 'text-[#5DA5F9]' : 'text-gray-400'}`} />
+                {!isCollapsed && <span className="text-sm">{item.label}</span>}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className={`p-4 border-t ${isCollapsed ? 'lg:block hidden' : ''}`} style={{ borderColor }}>
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
               className={`
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                ${activeItem === item.path 
-                  ? 'text-[#5DA5F9] font-medium' 
-                  : 'text-gray-600 hover:bg-gray-50'
-                }
+                flex items-center gap-3 w-full px-4 py-3 rounded-xl 
+                text-gray-500 hover:bg-gray-50 transition-colors
                 ${isCollapsed ? 'lg:justify-center lg:px-3' : ''}
               `}
-              style={activeItem === item.path ? { backgroundColor: activeBg } : {}}
             >
-              <item.icon className={`w-5 h-5 flex-shrink-0 ${activeItem === item.path ? 'text-[#5DA5F9]' : 'text-gray-400'}`} />
-              {!isCollapsed && <span className="text-sm">{item.label}</span>}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${isCollapsed ? 'lg:block hidden' : ''}`} style={{ borderColor }}>
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`
-              flex items-center gap-3 w-full px-4 py-3 rounded-xl 
-              text-gray-500 hover:bg-gray-50 transition-colors
-              ${isCollapsed ? 'lg:justify-center lg:px-3' : ''}
-            `}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-5 h-5" />
-            ) : (
-              <>
-                <ChevronLeft className="w-5 h-5" />
-                <span className="text-sm">Collapse</span>
-              </>
-            )}
-          </button>
+              {isCollapsed ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <>
+                  <ChevronLeft className="w-5 h-5" />
+                  <span className="text-sm">Collapse</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </aside>
     </>

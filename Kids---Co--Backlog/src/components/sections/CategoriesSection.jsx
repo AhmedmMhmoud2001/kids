@@ -2,6 +2,11 @@ import { Link } from 'react-router-dom';
 import Section from '../common/Section';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useId } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
 
 /**
  * Categories section component
@@ -10,10 +15,15 @@ const CategoriesSection = ({
   categories = [],
   limit = null,
   gridCols = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6',
-  className = ''
+  className = '',
+  pageSize = 6,
+  showArrows = true
 }) => {
   const { audience } = useApp();
   const { t } = useLanguage();
+  const id = useId().replace(/:/g, '');
+  const prevClass = `cats-prev-${id}`;
+  const nextClass = `cats-next-${id}`;
   const getCategoryClasses = (category) => {
     const slug = String(category.slug || '').toLowerCase();
     const name = String(t(category.name) || '').toLowerCase();
@@ -37,37 +47,90 @@ const CategoriesSection = ({
 
 
   const categoriesToShow = limit ? categories.slice(0, limit) : categories;
+  const total = categoriesToShow.length;
+  const shouldUseSwiper = total > pageSize;
+
+  const pages = shouldUseSwiper
+    ? Array.from({ length: Math.ceil(total / pageSize) }, (_, pageIndex) => {
+        const start = pageIndex * pageSize;
+        const end = Math.min(start + pageSize, total);
+        return categoriesToShow.slice(start, end);
+      })
+    : [categoriesToShow];
+
+  const isRTL =
+    typeof document !== 'undefined' &&
+    ((document.documentElement.getAttribute('dir') || 'ltr')?.toLowerCase() === 'rtl');
 
   return (
     <Section padding="py-4 lg:py-5" className={className}>
-      <div className={`grid ${gridCols} gap-4 lg:gap-6`}>
-        {categoriesToShow.map((category, idx) => {
-          const categoryPath = category.slug || '';
-
-          return (
-            <Link
-              key={idx}
-              to={`/category/${category.slug || categoryPath}?audience=${audience}`}
-              className={`group text-center hover:text-gray-500 }`}
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="relative">
+        {showArrows && shouldUseSwiper ? (
+          <>
+            <button
+              type="button"
+              className={`swiper-nav-btn ${prevClass} absolute -left-8 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-white`}
+              aria-label="Previous categories"
             >
-              <div className={`aspect-square  rounded-full overflow-hidden mb-3  shadow-md ${getCategoryClasses(category)}`}>
-                <img
-                  src={category.image || null}
-                  alt={t(category.name)}
-                  className="relative w-full h-full object-cover object-center z-10"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.classList.add('bg-gray-300');
-                  }}
-                />
+              ‹
+            </button>
+            <button
+              type="button"
+              className={`swiper-nav-btn ${nextClass} absolute -right-8 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-white`}
+              aria-label="Next categories"
+            >
+              ›
+            </button>
+          </>
+        ) : null}
+        <Swiper
+          modules={[Navigation]}
+          slidesPerView={1}
+          spaceBetween={0}
+          allowTouchMove={shouldUseSwiper}
+          navigation={
+            showArrows && shouldUseSwiper
+              ? { prevEl: `.${prevClass}`, nextEl: `.${nextClass}` }
+              : false
+          }
+        >
+          {pages.map((page, pageIndex) => (
+            <SwiperSlide key={pageIndex}>
+              <div className={`grid ${gridCols} gap-4 lg:gap-6`}>
+                {page.map((category, idx) => {
+                  const categoryPath = category.slug || '';
+                  const key = category.id || category.slug || `${pageIndex}-${idx}`;
+
+                  return (
+                    <Link
+                      key={key}
+                      to={`/category/${category.slug || categoryPath}?audience=${audience}`}
+                      className="group text-center hover:text-gray-500"
+                    >
+                      <div className={`aspect-square  rounded-full overflow-hidden mb-3  shadow-md ${getCategoryClasses(category)}`}>
+                        {category.image ? (
+                          <img
+                            src={category.image}
+                            alt={t(category.name)}
+                            className="relative w-full h-full object-cover object-center z-10"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentElement.classList.add('bg-gray-300');
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                      <h3 className="font-medium text-xs sm:text-sm md:text-base transition-colors">
+                        {t(category.name)}
+                      </h3>
+                    </Link>
+                  );
+                })}
               </div>
-              <h3 className={`font-medium text-xs sm:text-sm md:text-base transition-colors  `}>
-                {t(category.name)}
-              </h3>
-            </Link>
-          );
-        })}
+            </SwiperSlide>
+          ))}
+        </Swiper>
       </div>
     </Section>
   );

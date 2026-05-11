@@ -128,6 +128,7 @@ const Footer = () => {
               Qeematech
             </a>
           </p>
+
         </div>
       </div>
     </footer>
