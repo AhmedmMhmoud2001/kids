@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { fetchCategories } from '../../api/categories';
 import { useLanguage } from '../../context/LanguageContext';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation as SwiperNavigation } from 'swiper/modules';
+import { Navigation as SwiperNavigation, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
@@ -124,10 +124,16 @@ const Navigation = () => {
             </>
           ) : null}
           <Swiper
-            modules={[SwiperNavigation]}
+            key={isRTL ? 'rtl' : 'ltr'}
+            modules={[SwiperNavigation, Autoplay]}
             slidesPerView={1}
             spaceBetween={0}
             allowTouchMove={shouldUseSwiper}
+            autoplay={
+              shouldUseSwiper
+                ? { delay: 3500, disableOnInteraction: true, pauseOnMouseEnter: true }
+                : false
+            }
             navigation={
               shouldUseSwiper
                 ? { prevEl: `.${prevClass}`, nextEl: `.${nextClass}` }

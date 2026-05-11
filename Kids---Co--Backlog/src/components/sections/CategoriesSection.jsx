@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useId } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation } from 'swiper/modules';
+import { Navigation, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
@@ -17,7 +17,9 @@ const CategoriesSection = ({
   gridCols = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6',
   className = '',
   pageSize = 6,
-  showArrows = true
+  showArrows = true,
+  autoPlay = true,
+  autoPlayDelayMs = 3500
 }) => {
   const { audience } = useApp();
   const { t } = useLanguage();
@@ -69,14 +71,14 @@ const CategoriesSection = ({
           <>
             <button
               type="button"
-              className={`swiper-nav-btn ${prevClass} absolute -left-8 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-white`}
+              className={`swiper-nav-btn ${prevClass} absolute -left-10 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-white`}
               aria-label="Previous categories"
             >
               ‹
             </button>
             <button
               type="button"
-              className={`swiper-nav-btn ${nextClass} absolute -right-8 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-white`}
+              className={`swiper-nav-btn ${nextClass} absolute -right-10 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-white`}
               aria-label="Next categories"
             >
               ›
@@ -84,10 +86,16 @@ const CategoriesSection = ({
           </>
         ) : null}
         <Swiper
-          modules={[Navigation]}
+          key={isRTL ? 'rtl' : 'ltr'}
+          modules={[Navigation, Autoplay]}
           slidesPerView={1}
           spaceBetween={0}
           allowTouchMove={shouldUseSwiper}
+          autoplay={
+            autoPlay && shouldUseSwiper
+              ? { delay: autoPlayDelayMs, disableOnInteraction: true, pauseOnMouseEnter: true }
+              : false
+          }
           navigation={
             showArrows && shouldUseSwiper
               ? { prevEl: `.${prevClass}`, nextEl: `.${nextClass}` }

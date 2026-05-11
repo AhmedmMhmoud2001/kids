@@ -50,4 +50,6 @@
 - Hide the arrow when it is disabled (first/last page) so users understand which direction is available.
 - Fixed category pages with large product counts by fetching all backend pages (backend defaults to paginated responses with limit=50 and max=100).
 - Enabled internal scrolling for the dashboard sidebar menu so long lists remain accessible.
+- Admin dashboard: added category filter to products list and debounced search input to avoid refetching on each keystroke.
+- Enabled Swiper autoplay for category sections and header navigation (auto-advance between pages).
 

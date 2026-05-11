@@ -119,6 +119,16 @@
   pointer-events: none;
 }
 
+.swiper-nav-btn {
+  background: #63adfc !important; /* gray-900 */
+  color: #ffffff !important;
+  border-color: rgba(17, 24, 39, 0.15) !important;
+}
+
+.swiper-nav-btn:hover {
+  background: #63adfc !important;
+}
+
 .best-sellers-swiper .swiper-button-next:after,
 .best-sellers-swiper .swiper-button-prev:after {
   font-size: 18px !important;
