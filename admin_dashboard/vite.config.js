@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Proxies /api to local backend during dev (see src/api/config.js PUBLIC_BACKEND_ORIGIN).
+      // Proxies /api to backend during dev.
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://kids.nodeteam.site',
         changeOrigin: true,
         secure: false
       }

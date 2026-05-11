@@ -15,6 +15,7 @@ export const fetchProducts = async (audience = null, options = {}) => {
     if (options.limit != null) params.set('limit', String(options.limit));
     if (options.page != null) params.set('page', String(options.page));
     if (options.search) params.set('search', options.search);
+    if (options.category) params.set('category', options.category);
     const query = params.toString();
     const path = query ? `/products?${query}` : '/products';
 

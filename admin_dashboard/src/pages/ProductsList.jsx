@@ -3,6 +3,7 @@ import { Plus, Edit2, Trash2, Search, Eye, X, Heart } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchProducts, deleteProduct } from '../api/products';
 import { fetchSettings } from '../api/settings';
+import { fetchCategories } from '../api/categories';
 import { getSafeImageUrl, getProductDisplayImage, getProductAllImages } from '../utils/imageUtils';
 import { useLanguage } from '../context/LanguageContext';
 import { renderLocalized } from '../utils/localized';
@@ -18,7 +19,10 @@ const ProductsList = ({ audience, title }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [modalSelectedColor, setModalSelectedColor] = useState(null);
     const [offerDiscountByProductId, setOfferDiscountByProductId] = useState({});
@@ -50,7 +54,33 @@ const ProductsList = ({ audience, title }) => {
 
     useEffect(() => {
         loadProducts();
-    }, [audience, currentPage, searchTerm]); // Reload on page/search change
+    }, [audience, currentPage, debouncedSearch, selectedCategory]); // Reload on page/search/filter change
+
+    // Debounce search input to avoid refreshing on every keystroke
+    useEffect(() => {
+        const t = window.setTimeout(() => {
+            setDebouncedSearch(searchInput.trim());
+        }, 350);
+        return () => window.clearTimeout(t);
+    }, [searchInput]);
+
+    // Load categories for dropdown filter
+    useEffect(() => {
+        let alive = true;
+        const load = async () => {
+            try {
+                const res = await fetchCategories(audience);
+                const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+                if (!alive) return;
+                setCategories(list);
+            } catch (e) {
+                if (!alive) return;
+                setCategories([]);
+            }
+        };
+        if (audience) load();
+        return () => { alive = false; };
+    }, [audience]);
 
     // Refetch when returning from edit/create so variant changes appear
     useEffect(() => {
@@ -80,7 +110,8 @@ const ProductsList = ({ audience, title }) => {
                 fetchProducts(audience, {
                     limit: ITEMS_PER_PAGE,
                     page: currentPage,
-                    search: searchTerm
+                    search: debouncedSearch,
+                    category: selectedCategory || undefined
                 }),
                 fetchSettings()
             ]);
@@ -196,9 +227,6 @@ const ProductsList = ({ audience, title }) => {
     // but we might want to keep filteredProducts variable name to minimize diff changes if used below
     const filteredProducts = products;
 
-    if (loading) return <div className="p-4 text-center">Loading products...</div>;
-    if (error) return <div className="p-4 text-center text-red-600">Error: {error}</div>;
-
     return (
         <div className="space-y-6 overflow-x-hidden">
             {/* Header */}
@@ -218,109 +246,140 @@ const ProductsList = ({ audience, title }) => {
 
             {/* Search Bar */}
             <div className="bg-white rounded-lg shadow-sm p-4">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder={t(tx('Search products by name, SKU, or brand...', 'ابحث عن المنتجات بالاسم أو SKU أو العلامة...'))}
-                        value={searchTerm}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="relative md:col-span-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                            type="text"
+                            placeholder={t(tx('Search products by name, SKU, or brand...', 'ابحث عن المنتجات بالاسم أو SKU أو العلامة...'))}
+                            value={searchInput}
+                            onChange={(e) => {
+                                setSearchInput(e.target.value);
+                                setCurrentPage(1); // Reset to page 1 on search input
+                            }}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <select
+                        value={selectedCategory}
                         onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setCurrentPage(1); // Reset to page 1 on search
+                            setSelectedCategory(e.target.value);
+                            setCurrentPage(1);
                         }}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-label="Filter by category"
+                    >
+                        <option value="">{t(tx('All Categories', 'كل الكاتيجوري'))}</option>
+                        {categories.map((c) => (
+                            <option key={c.id || c.slug} value={c.slug}>
+                                {renderLocalized(c.name, language) || c.slug}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
             {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {filteredProducts.map((product) => (
-                    <div key={product.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                        {/* Product Image */}
-                        <div className="relative h-48 bg-blue-50/50 flex items-center justify-center">
-                            {getProductDisplayImage(product) ? (
-                                <img
-                                    src={getSafeImageUrl(getProductDisplayImage(product))}
-                                    alt={t(product.name)}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-blue-200 font-bold text-4xl uppercase select-none">
-                                    {t(product.name).substring(0, 2)}
+            {error ? (
+                <div className="p-4 text-center text-red-600 bg-white rounded-lg shadow-sm">
+                    Error: {error}
+                </div>
+            ) : (
+                <div className="relative">
+                    {loading && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 rounded-lg">
+                            <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                        {filteredProducts.map((product) => (
+                            <div key={product.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                                {/* Product Image */}
+                                <div className="relative h-48 bg-blue-50/50 flex items-center justify-center">
+                                    {getProductDisplayImage(product) ? (
+                                        <img
+                                            src={getSafeImageUrl(getProductDisplayImage(product))}
+                                            alt={t(product.name)}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-blue-200 font-bold text-4xl uppercase select-none">
+                                            {t(product.name).substring(0, 2)}
+                                        </div>
+                                    )}
+                                    <div className="absolute top-2 right-2 flex flex-col gap-1">
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${product.isActive
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
+                                            }`}>
+                                            {product.isActive ? t(tx('Active', 'نشط')) : t(tx('Inactive', 'غير نشط'))}
+                                        </span>
+                                        {product.isBestSeller && (
+                                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                                ⭐ {t(tx('Best Seller', 'الأكثر مبيعًا'))}
+                                            </span>
+                                        )}
+                                        {product.variants?.length > 0 && hasLowStockVariant(product) && (
+                                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800" title={t(tx('One or more variants are low on stock', 'يوجد متغير أو أكثر منخفض المخزون'))}>
+                                                {t(tx('Low Stock', 'مخزون منخفض'))}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            )}
-                            <div className="absolute top-2 right-2 flex flex-col gap-1">
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${product.isActive
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
-                                    }`}>
-                                    {product.isActive ? t(tx('Active', 'نشط')) : t(tx('Inactive', 'غير نشط'))}
-                                </span>
-                                {product.isBestSeller && (
-                                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                        ⭐ {t(tx('Best Seller', 'الأكثر مبيعًا'))}
-                                    </span>
-                                )}
-                                {product.variants?.length > 0 && hasLowStockVariant(product) && (
-                                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800" title={t(tx('One or more variants are low on stock', 'يوجد متغير أو أكثر منخفض المخزون'))}>
-                                        {t(tx('Low Stock', 'مخزون منخفض'))}
-                                    </span>
-                                )}
+
+                                {/* Product Info */}
+                                <div className="p-4">
+                                    <h3 className="font-semibold text-gray-900 mb-1 truncate">{t(product.name)}</h3>
+                                    <p className="text-sm text-gray-500 mb-1">{t(tx('SKU', 'رمز المنتج'))}: <span className="font-semibold text-gray-800">{product.sku || '-'}</span></p>
+                                    {product.variants?.length > 0 && <p className="text-xs text-gray-400 mb-1">{product.variants.length} variants</p>}
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        {t(tx('Stock', 'المخزون'))}: <span className="font-semibold text-gray-800">{product.variants?.length ? product.variants.reduce((s, v) => s + (v.stock || 0), 0) : (product.stock ?? 0)}</span>
+                                    </p>
+                                    <p className="text-lg font-bold text-blue-600 mb-2">
+                                        {product.variants?.length ? 'from ' : ''}{toEgp(product, product.basePrice ?? product.price ?? 0).toFixed(2)} EGP
+                                    </p>
+
+                                    {/* Likes Count */}
+                                    <div className="flex items-center gap-1 mb-3">
+                                        <Heart className="text-red-500 fill-red-500" size={18} />
+                                        <span className="text-sm font-semibold text-gray-700">
+                                            {product._count?.favorites || 0} {product._count?.favorites === 1 ? 'Like' : 'Likes'}
+                                        </span>
+                                    </div>
+
+                                    {(product.brandRel?.name || product.brand) && (
+                                        <p className="text-xs text-gray-500 mb-3">Brand: {t(product.brandRel?.name || product.brand)}</p>
+                                    )}
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setSelectedProduct(product)}
+                                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                                        >
+                                            <Eye size={16} />
+                                            View
+                                        </button>
+                                        <button
+                                            onClick={() => navigate(`/${audience.toLowerCase()}/products/${product.id}/edit`)}
+                                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        >
+                                            <Edit2 size={16} />
+                                            Edit
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(product.id)}
+                                            className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-
-                        {/* Product Info */}
-                        <div className="p-4">
-                            <h3 className="font-semibold text-gray-900 mb-1 truncate">{t(product.name)}</h3>
-                            <p className="text-sm text-gray-500 mb-1">{t(tx('SKU', 'رمز المنتج'))}: <span className="font-semibold text-gray-800">{product.sku || '-'}</span></p>
-                            {product.variants?.length > 0 && <p className="text-xs text-gray-400 mb-1">{product.variants.length} variants</p>}
-                            <p className="text-xs text-gray-500 mb-2">
-                                {t(tx('Stock', 'المخزون'))}: <span className="font-semibold text-gray-800">{product.variants?.length ? product.variants.reduce((s, v) => s + (v.stock || 0), 0) : (product.stock ?? 0)}</span>
-                            </p>
-                            <p className="text-lg font-bold text-blue-600 mb-2">
-                                {product.variants?.length ? 'from ' : ''}{toEgp(product, product.basePrice ?? product.price ?? 0).toFixed(2)} EGP
-                            </p>
-
-                            {/* Likes Count */}
-                            <div className="flex items-center gap-1 mb-3">
-                                <Heart className="text-red-500 fill-red-500" size={18} />
-                                <span className="text-sm font-semibold text-gray-700">
-                                    {product._count?.favorites || 0} {product._count?.favorites === 1 ? 'Like' : 'Likes'}
-                                </span>
-                            </div>
-
-                            {(product.brandRel?.name || product.brand) && (
-                                <p className="text-xs text-gray-500 mb-3">Brand: {t(product.brandRel?.name || product.brand)}</p>
-                            )}
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setSelectedProduct(product)}
-                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                                >
-                                    <Eye size={16} />
-                                    View
-                                </button>
-                                <button
-                                    onClick={() => navigate(`/${audience.toLowerCase()}/products/${product.id}/edit`)}
-                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                                >
-                                    <Edit2 size={16} />
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(product.id)}
-                                    className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
+                        ))}
                     </div>
-                ))}
-            </div>
+                </div>
+            )}
 
             {filteredProducts.length === 0 && !loading && (
                 <div className="text-center py-12 bg-white rounded-lg">
